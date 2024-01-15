@@ -5,11 +5,13 @@ import pygame
 from simulation.connection import carla
 from simulation.sensors import CameraSensor, CameraSensorEnv, CollisionSensor
 from simulation.settings import *
+from autoencoder.encoder import VariationalEncoder
+import torch
 
 
 class CarlaEnvironment():
 
-    def __init__(self, client, world, town, checkpoint_frequency=100, continuous_action=True) -> None:
+    def __init__(self, client, world, town, encoder, checkpoint_frequency=100, continuous_action=True) -> None:
 
 
         self.client = client
@@ -27,6 +29,7 @@ class CarlaEnvironment():
         self.checkpoint_frequency = checkpoint_frequency
         self.route_waypoints = None
         self.town = town
+        self.encoder = encoder
         
         # Objects to be kept alive
         self.camera_obj = None
@@ -62,7 +65,10 @@ class CarlaEnvironment():
                 transform = self.map.get_spawn_points()[38] #Town7  is 38 
                 self.total_distance = 750
             elif self.town == "Town02":
-                transform = self.map.get_spawn_points()[1] #Town2 is 1
+                # choices = [self.map.get_spawn_points()[6], self.map.get_spawn_points()[11]]
+                # transform = random.choice(choices)
+                transform = self.map.get_spawn_points()[6]
+                #Town2 is 11 or 6
                 self.total_distance = 780
             else:
                 transform = random.choice(self.map.get_spawn_points())
@@ -74,9 +80,16 @@ class CarlaEnvironment():
 
             # Camera Sensor
             self.camera_obj = CameraSensor(self.vehicle)
-            while(len(self.camera_obj.front_camera) == 0):
+            image_obs = None
+            while(image_obs is None):
                 time.sleep(0.0001)
-            self.image_obs = self.camera_obj.front_camera.pop(-1)
+                if len(self.camera_obj.front_camera) > 0:
+                    img = self.camera_obj.front_camera.pop(-1)
+                    processed_img = self.encoder.process_image(img)
+                    if not torch.any(torch.isinf(processed_img)):
+                        image_obs = processed_img
+
+            self.image_obs = image_obs
             self.sensor_list.append(self.camera_obj.sensor)
 
             # Third person view of our vehicle in the Simulated env
@@ -144,7 +157,7 @@ class CarlaEnvironment():
             self.collision_history.clear()
 
             self.episode_start_time = time.time()
-            return [self.image_obs, self.navigation_obs]
+            return self.encoder.process(self.image_obs, self.navigation_obs)
 
         except:
             self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensor_list])
@@ -281,10 +294,18 @@ class CarlaEnvironment():
                         self.checkpoint_frequency = None
                         self.checkpoint_waypoint_index = 0
 
-            while(len(self.camera_obj.front_camera) == 0):
+            image_obs = None
+            while(image_obs is None):
                 time.sleep(0.0001)
+                if len(self.camera_obj.front_camera) > 0:
+                    img = self.camera_obj.front_camera.pop(-1)
+                    processed_img = self.encoder.process_image(img)
+                    if not torch.any(torch.isinf(processed_img)):
+                        image_obs = processed_img
+                    else:
+                        image_obs = self.image_obs
 
-            self.image_obs = self.camera_obj.front_camera.pop(-1)
+            self.image_obs = image_obs
             normalized_velocity = self.velocity/self.target_speed
             normalized_distance_from_center = self.distance_from_center / self.max_distance_from_center
             normalized_angle = abs(self.angle / np.deg2rad(20))
@@ -303,7 +324,7 @@ class CarlaEnvironment():
                 for actor in self.actor_list:
                     actor.destroy()
             
-            return [self.image_obs, self.navigation_obs], reward, done, [self.distance_covered, self.center_lane_deviation]
+            return self.encoder.process(self.image_obs, self.navigation_obs), reward, done, [self.distance_covered, self.center_lane_deviation]
 
         except:
             self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensor_list])

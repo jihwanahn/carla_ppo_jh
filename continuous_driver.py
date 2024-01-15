@@ -20,7 +20,7 @@ from parameters import *
 def parse_args():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp-name', type=str, help='name of the experiment')
+    parser.add_argument('--exp-name', type=str, default='ppo', help='name of the experiment')
     parser.add_argument('--env-name', type=str, default='carla', help='name of the simulation environment')
     parser.add_argument('--learning-rate', type=float, default=PPO_LEARNING_RATE, help='learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=SEED, help='seed of the experiment')
@@ -67,10 +67,11 @@ def runner():
             Here the functionality can be extended to different algorithms.
 
             """ 
-            sys.exit() 
+            # sys.exit() 
     except Exception as e:
-        print(e.message)
-        sys.exit()
+        raise e
+        # print(e.message)
+        # sys.exit()
     
     if train == True:
         writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}/{town}")
@@ -109,11 +110,12 @@ def runner():
     except:
         logging.error("Connection has been refused by the server.")
         ConnectionRefusedError
-    if train:
-        env = CarlaEnvironment(client, world,town)
-    else:
-        env = CarlaEnvironment(client, world,town, checkpoint_frequency=None)
+
     encode = EncodeState(LATENT_DIM)
+    if train:
+        env = CarlaEnvironment(client, world,town, encoder=encode)
+    else:
+        env = CarlaEnvironment(client, world,town, encoder=encode, checkpoint_frequency=None)
 
 
     #========================================================================
@@ -146,7 +148,6 @@ def runner():
             while timestep < total_timesteps:
             
                 observation = env.reset()
-                observation = encode.process(observation)
 
                 current_ep_reward = 0
                 t1 = datetime.now()
@@ -159,7 +160,6 @@ def runner():
                     observation, reward, done, info = env.step(action)
                     if observation is None:
                         break
-                    observation = encode.process(observation)
                     
                     agent.memory.rewards.append(reward)
                     agent.memory.dones.append(done)
@@ -198,7 +198,9 @@ def runner():
                 if episode % 10 == 0:
                     agent.learn()
                     agent.chkpt_save()
-                    chkt_file_nums = len(next(os.walk(f'checkpoints/PPO/{town}'))[2])
+                    chkpt_dir = f'checkpoints/PPO/{town}'
+                    os.makedirs(chkpt_dir, exist_ok=True)
+                    chkt_file_nums = len(next(os.walk(chkpt_dir))[2])
                     if chkt_file_nums != 0:
                         chkt_file_nums -=1
                     chkpt_file = f'checkpoints/PPO/{town}/checkpoint_ppo_'+str(chkt_file_nums)+'.pickle'
@@ -235,12 +237,11 @@ def runner():
                         pickle.dump(data_obj, handle)
                         
             print("Terminating the run.")
-            sys.exit()
+            # sys.exit()
         else:
             #Testing
             while timestep < args.test_timesteps:
                 observation = env.reset()
-                observation = encode.process(observation)
 
                 current_ep_reward = 0
                 t1 = datetime.now()
@@ -250,7 +251,6 @@ def runner():
                     observation, reward, done, info = env.step(action)
                     if observation is None:
                         break
-                    observation = encode.process(observation)
                     
                     timestep +=1
                     current_ep_reward += reward
@@ -286,16 +286,10 @@ def runner():
                 distance_covered = 0
 
             print("Terminating the run.")
-            sys.exit()
-
-    finally:
-        sys.exit()
+            # sys.exit()
+    except Exception as e:
+        raise e
 
 
 if __name__ == "__main__":
-    try:        
-        runner()
-    except KeyboardInterrupt:
-        sys.exit()
-    finally:
-        print('\nExit')
+    runner()
