@@ -120,6 +120,7 @@ class CollisionSensor:
         self = weak_self()
         if not self:
             return
+        # image.convert(carla.ColorConverter.CityScapesPalette)
         impulse = event.normal_impulse
         intensity = math.sqrt(impulse.x ** 2 + impulse.y ** 2 + impulse.z ** 2)
         self.collision_data.append(intensity)
