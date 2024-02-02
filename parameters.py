@@ -32,7 +32,7 @@ MODEL_TARGET = 'carla_dueling_dqn_target.pth'
 
 #Proximal Policy Optimization (hyper)parameters
 EPISODE_LENGTH = 7500
-TOTAL_TIMESTEPS = 2e6
+TOTAL_TIMESTEPS = 3e6
 ACTION_STD_INIT = 0.2
 TEST_TIMESTEPS = 5e4
 PPO_LEARNING_RATE = 1e-4  
@@ -41,17 +41,17 @@ os.makedirs(PPO_CHECKPOINT_DIR, exist_ok=True)
 POLICY_CLIP = 0.2
 
 #Soft Actor Critic (hyper)parameters
-SAC_LEARNING_RATE = 0.0001
-SAC_CHECKPOINT_DIR = 'preTrained_models/sac/'
-os.makedirs(SAC_CHECKPOINT_DIR, exist_ok=True)
-MEMORY_SIZE = int(1e6)
-BATCH_SIZE = 256
-POLICY_UPDATE = 1
-POLICY_DELAY = 2
-POLICY_CLIP = 0.5
-POLICY_NOISE = 0.2
-POLICY_NOISE_CLIP = 0.5
-GAMMA = 0.99
-TAU = 0.005
-ALPHA = 0.2
-AUTO_ENTROPY = True
+# SAC_LEARNING_RATE = 0.0001
+# SAC_CHECKPOINT_DIR = 'preTrained_models/sac/'
+# os.makedirs(SAC_CHECKPOINT_DIR, exist_ok=True)
+# MEMORY_SIZE = int(1e6)
+# BATCH_SIZE = 256
+# POLICY_UPDATE = 1
+# POLICY_DELAY = 2
+# POLICY_CLIP = 0.5
+# POLICY_NOISE = 0.2
+# POLICY_NOISE_CLIP = 0.5
+# GAMMA = 0.99
+# TAU = 0.005
+# ALPHA = 0.2
+# AUTO_ENTROPY = True

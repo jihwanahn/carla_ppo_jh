@@ -15,6 +15,7 @@ from networks.on_policy.ppo.agent import PPOAgent
 from simulation.connection import ClientConnection
 from simulation.environment import CarlaEnvironment
 from parameters import *
+from simulation.settings import PORT                                                                                                                                                                                         
 
 
 def parse_args():
@@ -33,6 +34,7 @@ def parse_args():
     parser.add_argument('--load-checkpoint', type=bool, default=MODEL_LOAD, help='resume training?')
     parser.add_argument('--torch-deterministic', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, help='if toggled, `torch.backends.cudnn.deterministic=False`')
     parser.add_argument('--cuda', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, help='if toggled, cuda will not be enabled by deafult')
+    parser.add_argument('--port', type=int, default=PORT, help='port number of the server')
     args = parser.parse_args()
     
     return args
@@ -74,9 +76,9 @@ def runner():
         # sys.exit()
     
     if train == True:
-        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}/{town}")
+        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
     else:
-        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}_TEST/{town}")
+        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}_TEST/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}" for key, value in vars(args).items()])))
@@ -105,7 +107,7 @@ def runner():
     #========================================================================
 
     try:
-        client, world = ClientConnection(town).setup()
+        client, world = ClientConnection(town, port=args.port).setup()
         logging.info("Connection has been setup successfully.")
     except:
         logging.error("Connection has been refused by the server.")
@@ -210,7 +212,6 @@ def runner():
                     
                 
                 if episode % 5 == 0:
-
                     writer.add_scalar("Episodic Reward/episode", scores[-1], episode)
                     writer.add_scalar("Cumulative Reward/info", cumulative_score, episode)
                     writer.add_scalar("Cumulative Reward/(t)", cumulative_score, timestep)
@@ -222,13 +223,14 @@ def runner():
                     writer.add_scalar("Average Deviation from Center/(t)", deviation_from_center/5, timestep)
                     writer.add_scalar("Average Distance Covered (m)/episode", distance_covered/5, episode)
                     writer.add_scalar("Average Distance Covered (m)/(t)", distance_covered/5, timestep)
+                    # writer.add_scalar("Median Reward/episode", np.median(scores[-5]), episode)
+                    # writer.add_scalar("Median Reward/(t)", np.median(scores[-5]), timestep)
 
                     episodic_length = list()
                     deviation_from_center = 0
                     distance_covered = 0
 
                 if episode % 100 == 0:
-                    
                     agent.save()
                     chkt_file_nums = len(next(os.walk(f'checkpoints/PPO/{town}'))[2])
                     chkpt_file = f'checkpoints/PPO/{town}/checkpoint_ppo_'+str(chkt_file_nums)+'.pickle'

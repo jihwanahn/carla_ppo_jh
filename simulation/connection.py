@@ -14,15 +14,16 @@ import carla
 from simulation.settings import PORT, TIMEOUT, HOST
 
 class ClientConnection:
-    def __init__(self, town):
+    def __init__(self, town, port=PORT):
         self.client = None
         self.town = town
+        self.port = port
 
     def setup(self):
         try:
 
             # Connecting to the  Server
-            self.client = carla.Client(HOST, PORT)
+            self.client = carla.Client(HOST, self.port)
             self.client.set_timeout(TIMEOUT)
             self.world = self.client.load_world(self.town)
             self.world.set_weather(carla.WeatherParameters.CloudyNoon)
