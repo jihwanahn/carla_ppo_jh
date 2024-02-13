@@ -28,7 +28,7 @@ DQN_CHECKPOINT_DIR = 'preTrained_models/ddqn'
 os.makedirs(DQN_CHECKPOINT_DIR, exist_ok=True)
 MODEL_ONLINE = 'carla_dueling_dqn_online.pth'
 MODEL_TARGET = 'carla_dueling_dqn_target.pth'
-
+TOWN7 = 'Town07'
 
 #Proximal Policy Optimization (hyper)parameters
 EPISODE_LENGTH = 7500

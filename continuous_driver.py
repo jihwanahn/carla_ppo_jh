@@ -118,6 +118,7 @@ def runner():
         env = CarlaEnvironment(client, world,town, encoder=encode)
     else:
         env = CarlaEnvironment(client, world,town, encoder=encode, checkpoint_frequency=None)
+        # env = CarlaEnvironment(client, world,town, checkpoint_frequency=None)
 
 
     #========================================================================
@@ -223,8 +224,6 @@ def runner():
                     writer.add_scalar("Average Deviation from Center/(t)", deviation_from_center/5, timestep)
                     writer.add_scalar("Average Distance Covered (m)/episode", distance_covered/5, episode)
                     writer.add_scalar("Average Distance Covered (m)/(t)", distance_covered/5, timestep)
-                    # writer.add_scalar("Median Reward/episode", np.median(scores[-5]), episode)
-                    # writer.add_scalar("Median Reward/(t)", np.median(scores[-5]), timestep)
 
                     episodic_length = list()
                     deviation_from_center = 0

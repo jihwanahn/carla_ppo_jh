@@ -5,7 +5,6 @@ import pygame
 from simulation.connection import carla
 from simulation.sensors import CameraSensor, CameraSensorEnv, CollisionSensor
 from simulation.settings import *
-from autoencoder.encoder import VariationalEncoder
 import torch
 
 
@@ -191,7 +190,10 @@ class CarlaEnvironment():
                 steer = max(min(steer, 1.0), -1.0)
                 throttle = float((action_idx[1] + 1.0)/2)
                 throttle = max(min(throttle, 1.0), 0.0)
-                self.vehicle.apply_control(carla.VehicleControl(steer=self.previous_steer*0.9 + steer*0.1, throttle=self.throttle*0.9 + throttle*0.1))
+                smoothing_factor = 0.1
+                self.vehicle.apply_control(carla.VehicleControl(
+                    steer=self.previous_steer*(1-smoothing_factor) + steer*smoothing_factor, 
+                    throttle=self.throttle*0.9 + throttle*0.1))
                 self.previous_steer = steer
                 self.throttle = throttle
             else:

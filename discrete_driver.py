@@ -21,7 +21,7 @@ from parameters import *
 def parse_args():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp-name', type=str, help='name of the experiment')
+    parser.add_argument('--exp-name', type=str, default='ddqn', help='name of the experiment')
     parser.add_argument('--env-name', type=str, default='carla', help='name of the simulation environment')
     parser.add_argument('--learning-rate', type=float, default=DQN_LEARNING_RATE, help='learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=SEED, help='seed of the experiment')
@@ -48,7 +48,7 @@ def runner():
     
     try:
         if exp_name == 'ddqn':
-            run_name = f"DDQN"
+            run_name = "DDQN"
     except Exception as e:
         print(e.message)
         sys.exit()
@@ -84,7 +84,7 @@ def runner():
     if checkpoint_load:
         agent.load_model()
         if exp_name == 'ddqn':
-            with open('checkpoints/DDQN/{town}/checkpoint_ddqn.pickle', 'rb') as f:
+            with open(f'checkpoints/DDQN/{town}/checkpoint_ddqn.pickle', 'rb') as f:
                 data = pickle.load(f)
                 epoch = data['epoch']
                 cumulative_score = data['cumulative_score']
@@ -183,7 +183,7 @@ def runner():
 
                     if exp_name == 'ddqn':
                         data_obj = {'cumulative_score': cumulative_score, 'epsilon': agent.epsilon,'epoch': step}
-                        with open('checkpoints/DDQN/{town}/checkpoint_ddqn.pickle', 'wb') as handle:
+                        with open(f'checkpoints/DDQN/{town}/checkpoint_ddqn.pickle', 'wb') as handle:
                             pickle.dump(data_obj, handle)
 
                     writer.add_scalar("Cumulative Reward/info", cumulative_score, step)
@@ -199,19 +199,20 @@ def runner():
                     distance_covered = 0
 
             print("Terminating the run.")
-            sys.exit()
-        else:
-            sys.exit()
-
-    finally:
-        sys.exit()
+        #     sys.exit()
+        # else:
+        #     sys.exit()
+    except Exception as e:
+        raise e
+    # finally:
+    #     sys.exit()
 
 
 if __name__ == "__main__":
-    try:    
+    # try:    
         runner()
 
-    except KeyboardInterrupt:
-        sys.exit()
-    finally:
-        print('\nExit')
+    # except KeyboardInterrupt:
+    #     sys.exit()
+    # finally:
+    #     print('\nExit')
