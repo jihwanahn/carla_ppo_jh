@@ -26,7 +26,7 @@ class ClientConnection:
             self.client = carla.Client(HOST, self.port)
             self.client.set_timeout(TIMEOUT)
             self.world = self.client.load_world(self.town)
-            self.world.set_weather(carla.WeatherParameters.CloudyNoon)
+            self.world.set_weather(carla.WeatherParameters.ClearNoon)
             return self.client, self.world
 
         except Exception as e:

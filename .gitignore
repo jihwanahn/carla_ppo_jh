@@ -2,3 +2,4 @@
 _out
 *.png
 autoencoder/dataset/*
+autoencoder/dataset

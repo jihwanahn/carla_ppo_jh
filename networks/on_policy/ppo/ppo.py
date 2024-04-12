@@ -23,26 +23,34 @@ class ActorCritic(nn.Module):
 
         # actor
         self.actor = nn.Sequential(
-                        nn.Linear(self.obs_dim, 500),
-                        nn.Tanh(),
-                        nn.Linear(500, 300),
-                        nn.Tanh(),
-                        nn.Linear(300, 100),
-                        nn.Tanh(),
-                        nn.Linear(100, self.action_dim),
-                        nn.Tanh()
-                    )
+                nn.Linear(self.obs_dim, 500),
+                nn.Tanh(),
+                nn.Linear(500, 400),
+                nn.Tanh(),
+                nn.Linear(400, 300),
+                nn.Tanh(),
+                nn.Linear(300, 200),
+                nn.Tanh(),
+                nn.Linear(200, 100),
+                nn.Tanh(),
+                nn.Linear(100, self.action_dim),
+                nn.Tanh()
+                )
         
         # critic
         self.critic = nn.Sequential(
-                        nn.Linear(self.obs_dim, 500),
-                        nn.Tanh(),
-                        nn.Linear(500, 300),
-                        nn.Tanh(),
-                        nn.Linear(300, 100),
-                        nn.Tanh(),
-                        nn.Linear(100, 1)
-                    )
+                nn.Linear(self.obs_dim, 500),
+                nn.Tanh(),
+                nn.Linear(500, 400),
+                nn.Tanh(),
+                nn.Linear(400, 300),
+                nn.Tanh(),
+                nn.Linear(300, 200),
+                nn.Tanh(),
+                nn.Linear(200, 100),
+                nn.Tanh(),
+                nn.Linear(100, 1)
+                )
 
     def forward(self):
         raise NotImplementedError
