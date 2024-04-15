@@ -15,7 +15,7 @@ from networks.on_policy.ppo.agent import PPOAgent
 from simulation.connection import ClientConnection
 from simulation.environment import CarlaEnvironment
 from parameters import *
-from simulation.settings import PORT                                                                                                                                                                                         
+from simulation.settings import PORT                                                                                                                                                                                
 
 
 def parse_args():

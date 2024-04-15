@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 from encoder import VariationalEncoder
 from decoder import Decoder
+from datetime import datetime
 
 
 # Hyper-parameters
@@ -81,7 +82,7 @@ def main():
 
     data_dir = 'autoencoder/dataset/'
 
-    writer = SummaryWriter(f"runs/"+"auto-encoder")
+    writer = SummaryWriter(f"runs/auto-encoder/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
     
     # Applying Transformation
     train_transforms = transforms.Compose([transforms.RandomRotation(30),transforms.RandomHorizontalFlip(),transforms.ToTensor()])

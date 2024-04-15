@@ -1,3 +1,5 @@
 ﻿*.pyc
 _out
+autoencoder/dataset/*
+autoencoder/dataset
 .vs

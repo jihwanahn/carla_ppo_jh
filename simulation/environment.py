@@ -46,7 +46,6 @@ import torch
 import logging
 
 
-
 class CarlaEnvironment():
 
     def __init__(self, client, world, town, encoder, checkpoint_frequency=100, continuous_action=True) -> None:
@@ -80,6 +79,8 @@ class CarlaEnvironment():
         self.actor_list = list()
         self.walker_list = list()
         self.walker_controller_list = list()
+
+        # comment below line if you don't want to spawn pedestrians
         self.create_pedestrians()        
 
 
@@ -104,8 +105,8 @@ class CarlaEnvironment():
             elif self.town == "Town02":
                 # choices = [self.map.get_spawn_points()[6], self.map.get_spawn_points()[11]]
                 # transform = random.choice(choices)
-                transform = self.map.get_spawn_points()[6] # 1 6 53
-                self.total_distance = 780
+                transform = self.map.get_spawn_points()[1] # 1 6 53
+                self.total_distance = 1000#780
             else:
                 transform = random.choice(self.map.get_spawn_points())
                 self.total_distance = 250
@@ -184,9 +185,10 @@ class CarlaEnvironment():
                 self.vehicle.set_transform(transform)
                 self.current_waypoint_index = self.checkpoint_waypoint_index
                 self.remove_pedestrians()
-                self.create_pedestrians()
+                # self.create_pedestrians()
+                self.create_pedestrians_new(transform)
             
-            print("Vehicle Location:", self.vehicle.get_location())
+            # print("Vehicle Location:", self.vehicle.get_location())
             self.navigation_obs = np.array([self.throttle, self.velocity, self.previous_steer, self.distance_from_center, self.angle])
             
             
@@ -233,7 +235,7 @@ class CarlaEnvironment():
                 smoothing_factor = 0.1
                 self.vehicle.apply_control(carla.VehicleControl(
                     steer=self.previous_steer*(1-smoothing_factor) + steer*smoothing_factor, 
-                    throttle=self.throttle*0.9 + throttle*0.1))
+                    throttle=self.throttle*0.8 + throttle*0.2))
                 self.previous_steer = steer
                 self.throttle = throttle
             else:
@@ -344,7 +346,7 @@ class CarlaEnvironment():
                         image_obs = processed_img
                     else:
                         image_obs = self.image_obs
-
+                                
             self.image_obs = image_obs
             normalized_velocity = self.velocity/self.target_speed
             normalized_distance_from_center = self.distance_from_center / self.max_distance_from_center
@@ -383,7 +385,7 @@ class CarlaEnvironment():
 # -------------------------------------------------
 
     def create_pedestrians(self):
-        DISTANCE_THRESHOLD = 100.0
+        DISTANCE_THRESHOLD = 50.0
         percentagePedestraiansRunning = 100.0
         percentagePedestraiansCrossing = 100.0
             # for i in range(0, len(self.walker_list), 2):
@@ -440,13 +442,13 @@ class CarlaEnvironment():
                     self.walker_controller_list.append(walker_controller.id)
                     self.walker_list.append(walker.id)
             
-            print('Size of walker_list:', len(self.walker_list))
-            print('Size of walker_controller_list:', len(self.walker_controller_list))
+            #print('Size of walker_list:', len(self.walker_list))
+            #print('Size of walker_controller_list:', len(self.walker_controller_list))
                 
             all_actors = self.world.get_actors(self.walker_controller_list)
 
             # set how many pedestrians can cross the road
-            self.world.set_pedestrians_cross_factor(percentagePedestraiansCrossing)
+            self.world.set_pedestrians_cross_factor(100.0)
             # 3. Starting the motion of our pedestrians
             for i in range(0, len(self.walker_controller_list), 2):
                 # start walker
@@ -461,71 +463,84 @@ class CarlaEnvironment():
             self.client.apply_batch(
                 [carla.command.DestroyActor(x) for x in self.walker_list])
 
-    def create_pedestrians_v2(self):
-        try:
-            percentagePedestriansRunning = 100.0
-            percentagePedestriansCrossing = 100.0
-
-            spawn_points = []
-            for i in range(NUMBER_OF_PEDESTRIAN):
-                spawn_point = carla.Transform()
-                loc = self.world.get_random_location_from_navigation()
-                if (loc != None):
-                    spawn_point.location = loc
-                    spawn_points.append(spawn_point)
+    def create_pedestrians_new(self, transform):
+        DISTANCE_THRESHOLD = 75.0
+        percentagePedestraiansRunning = 100.0
+        percentagePedestraiansCrossing = 100.0
+            # for i in range(0, len(self.walker_list), 2):
+            #     all_walkers[i].stop()
+            # Move pedestrians to near the vehicle
+            # all_walkers = self.world.get_actors(self.walker_list)
+            # print("There's %d walkers in the simulation." % len(all_walkers))
             
-            batch = []
-            walker_speed = []
-            for spawn_point in spawn_points:
+            
+                        
+            # for event in pygame.event.get():
+            #     if event.type == pygame.KEYUP:
+            #         if event.key == K_F1:
+            #             print("F1 key pressed")
+            #             print("Location of walker: ", all_walkers[0].get_location())
+
+            # 자동차로부터 일정 거리 내에 있는 스폰포인트를 찾는다.
+            # spawn_points = self.map.get_spawn_points()
+            # nearby_spawn_points = [point for point in spawn_points if self.vehicle.get_location().distance(point.location) < 100]
+
+            # 스폰포인트를 찾았다면 walker를 해당 위치로 transform을 변경시킨다.
+            # for i in range(0, len(self.walker_list), 2):
+            #     all_walkers[i].set_transform(random.choice(nearby_spawn_points))
+            # walker는 이동을 시작한다.
+            
+        try:
+            walker_spawn_points = []
+            for i in range(NUMBER_OF_PEDESTRIAN):
+                spawn_point_ = carla.Transform()
+                loc = self.world.get_random_location_from_navigation()
+                
+
+                if (loc != None and loc.distance(transform.location) < DISTANCE_THRESHOLD):
+                # if (loc != None):
+                    spawn_point_.location = loc
+                    walker_spawn_points.append(spawn_point_)
+            # print(spawn_point_.location.distance(self.vehicle.get_location()))
+            for spawn_point_ in walker_spawn_points:
                 walker_bp = random.choice(self.blueprint_library.filter('walker.pedestrian.*'))
-                # set as not invincible
+                walker_controller_bp = self.blueprint_library.find('controller.ai.walker')
+                # Walkers are made visible in the simulation
                 if walker_bp.has_attribute('is_invincible'):
                     walker_bp.set_attribute('is_invincible', 'false')
-                # set the max speed
+                # They're all walking not running on their recommended speed
                 if walker_bp.has_attribute('speed'):
-                    if (random.random() > percentagePedestriansRunning):
-                        # walking
-                        walker_speed.append(walker_bp.get_attribute('speed').recommended_values[1])
-                    else:
-                        # running
-                        walker_speed.append(walker_bp.get_attribute('speed').recommended_values[2])
+                    walker_bp.set_attribute(
+                        'speed', (walker_bp.get_attribute('speed').recommended_values[2]))
                 else:
-                    print("Walker has no speed")
-                    walker_speed.append(0.0)
-                batch.append(self.world.try_spawn_actor(walker_bp, spawn_point))
-            results = self.client.apply_batch(batch)
-            walker_speed2 = []
-            for i in range(len(results)):
-                if results[i].error:
-                    logging.error(results[i].error)
-                else:
-                    walkers_list.append({"id": results[i].actor_id})
-                    walker_speed2.append(walker_speed[i])
-            walker_speed = walker_speed2
-
-            batch = []
-            walker_controller_bp = self.world.get_blueprint_library().find('controller.ai.walker')
-            for i in range(len(walkers_list)):
-                batch.append(self.world.try_spawn_actor(walker_controller_bp, carla.Transform(), walkers_list[i]["id"]))
-            results = self.client.apply_batch(batch)
-            for i in range(len(results)):
-                if results[i].error:
-                    logging.error(results[i].error)
-                else:
-                    walkers_list[i]["con"] = results[i].actor_id
-
-            for i in range(len(walkers_list)):
-                all_id.append(walkers_list[i]["con"])
-                all_id.append(walkers_list[i]["id"])
-            all_actors = self.world.get_actors(all_id)
-            self.world.set_pedestrians_cross_factor(percentagePedestriansCrossing)
-
-            for i in range(0, len(all_id), 2):
-                all_actors[i].start()
-                all_actors[i].go_to_location(self.world.get_random_location_from_navigation())
+                    walker_bp.set_attribute('speed', 20.0)
+                walker = self.world.try_spawn_actor(walker_bp, spawn_point_)
+                if walker is not None:
+                    walker_controller = self.world.try_spawn_actor(
+                        walker_controller_bp, carla.Transform(), walker)
+                    self.walker_controller_list.append(walker_controller.id)
+                    self.walker_list.append(walker.id)
             
-        except Exception as e:
-            raise e
+            print('Size of walker_list:', len(self.walker_list))
+            print('Size of walker_controller_list:', len(self.walker_controller_list))
+                
+            all_actors = self.world.get_actors(self.walker_controller_list)
+
+            # set how many pedestrians can cross the road
+            self.world.set_pedestrians_cross_factor(100.0)
+            # 3. Starting the motion of our pedestrians
+            for i in range(0, len(self.walker_controller_list), 2):
+                # start walker
+                all_actors[i].start()
+            # set walk to random point
+                all_actors[i].go_to_location(
+                    self.world.get_random_location_from_navigation())
+                all_actors[i].set_max_speed(float(1.0 + random.random() * 1.0))
+            print('spawned %d walkers' % len(self.walker_list))
+
+        except:
+            self.client.apply_batch(
+                [carla.command.DestroyActor(x) for x in self.walker_list])
 
 # ---------------------------------------------------
 # Creating and Spawning other vehciles in our world|
