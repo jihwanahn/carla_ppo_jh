@@ -14,14 +14,10 @@ class ActorCritic(nn.Module):
         self.action_dim = action_dim
         self.device = torch.device("cpu")
         
-        # Create our variable for the matrix.
-        # Note that I chose 0.2 for stdev arbitrarily.
         self.cov_var = torch.full((self.action_dim,), action_std_init)
 
-        # Create the covariance matrix
         self.cov_mat = torch.diag(self.cov_var).unsqueeze(dim=0)
 
-        # actor
         self.actor = nn.Sequential(
                         nn.Linear(self.obs_dim, 500),
                         nn.Tanh(),
@@ -33,7 +29,6 @@ class ActorCritic(nn.Module):
                         nn.Tanh()
                     )
         
-        # critic
         self.critic = nn.Sequential(
                         nn.Linear(self.obs_dim, 500),
                         nn.Tanh(),

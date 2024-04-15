@@ -2,7 +2,6 @@ import sys
 import torch
 from autoencoder.encoder import VariationalEncoder
 import numpy as np
-from PIL import Image
 
 class EncodeState():
     def __init__(self, latent_dim):
@@ -18,14 +17,13 @@ class EncodeState():
                 params.requires_grad = False
         except:
             print('Encoder could not be initialized.')
-            # sys.exit()
     
     def process_image(self, image):
         image_obs = torch.tensor(image, dtype=torch.float).to(self.device)
         image_obs = image_obs.unsqueeze(0)
         image_obs = image_obs.permute(0,3,2,1)
         image_obs_result = self.conv_encoder(image_obs)
-
+        
         '''
         for t in range(1000):
             if torch.any(torch.isinf(image_obs_result)):

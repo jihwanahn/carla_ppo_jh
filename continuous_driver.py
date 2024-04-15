@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--test-timesteps', type=int, default=TEST_TIMESTEPS, help='timesteps to test our model')
     parser.add_argument('--episode-length', type=int, default=EPISODE_LENGTH, help='max timesteps in an episode')
     parser.add_argument('--train', default=True, type=boolean_string, help='is it training?')
-    parser.add_argument('--town', type=str, default="Town07", help='which town do you like?')
+    parser.add_argument('--town', type=str, default="Town02", help='which town do you like?')
     parser.add_argument('--load-checkpoint', type=bool, default=MODEL_LOAD, help='resume training?')
     parser.add_argument('--torch-deterministic', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, help='if toggled, `torch.backends.cudnn.deterministic=False`')
     parser.add_argument('--cuda', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, help='if toggled, cuda will not be enabled by deafult')
@@ -156,8 +156,6 @@ def runner():
                 t1 = datetime.now()
 
                 for t in range(args.episode_length):
-                
-                    # select action with policy
                     action = agent.get_action(observation, train=True)
 
                     observation, reward, done, info = env.step(action)
@@ -176,7 +174,6 @@ def runner():
                     if timestep == total_timesteps -1:
                         agent.chkpt_save()
 
-                    # break; if the episode is over
                     if done:
                         episode += 1
 
@@ -196,8 +193,9 @@ def runner():
                 else:
                     cumulative_score = np.mean(scores)
 
-
                 print('Episode: {}'.format(episode),', Timestep: {}'.format(timestep),', Reward:  {:.2f}'.format(current_ep_reward),', Average Reward:  {:.2f}'.format(cumulative_score))
+                
+
                 if episode % 10 == 0:
                     agent.learn()
                     agent.chkpt_save()
@@ -228,6 +226,7 @@ def runner():
                     episodic_length = list()
                     deviation_from_center = 0
                     distance_covered = 0
+
 
                 if episode % 100 == 0:
                     agent.save()
