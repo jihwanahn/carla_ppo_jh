@@ -3,3 +3,4 @@ _out
 autoencoder/dataset/*
 autoencoder/dataset
 .vs
+out_split
