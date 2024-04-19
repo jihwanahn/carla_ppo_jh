@@ -38,6 +38,8 @@ TEST_TIMESTEPS = 5e4
 PPO_LEARNING_RATE = 1e-4  
 PPO_CHECKPOINT_DIR = 'preTrained_models/ppo/'
 os.makedirs(PPO_CHECKPOINT_DIR, exist_ok=True)
+PPO_CNN_CHECKPOINT_DIR = 'preTrained_models/ppo_cnn/'
+os.makedirs(PPO_CNN_CHECKPOINT_DIR, exist_ok=True)
 POLICY_CLIP = 0.2
 
 #Soft Actor Critic (hyper)parameters

@@ -10,7 +10,7 @@ import torch
 
 class CarlaEnvironment():
 
-    def __init__(self, client, world, town, encoder, checkpoint_frequency=100, continuous_action=True) -> None:
+    def __init__(self, client, world, town, checkpoint_frequency=100, continuous_action=True) -> None:
 
 
         self.client = client
@@ -28,7 +28,7 @@ class CarlaEnvironment():
         self.checkpoint_frequency = checkpoint_frequency
         self.route_waypoints = None
         self.town = town
-        self.encoder = encoder
+        
         
         # Objects to be kept alive
         self.camera_obj = None
@@ -43,7 +43,7 @@ class CarlaEnvironment():
         self.walker_controller_list = list()
 
         # comment below line if you don't want to spawn pedestrians
-        # self.create_pedestrians()        
+        # self.create_pedestrians()
 
 
     # A reset function for reseting our environment.
@@ -58,36 +58,29 @@ class CarlaEnvironment():
                 self.actor_list.clear()
             self.remove_sensors()
 
+
             # Blueprint of our main vehicle
             vehicle_bp = self.get_vehicle(CAR_NAME)
 
             if self.town == "Town07":
-                transform = self.map.get_spawn_points()[38]
+                transform = self.map.get_spawn_points()[38] #Town7  is 38 
                 self.total_distance = 750
             elif self.town == "Town02":
-                # choices = [self.map.get_spawn_points()[6], self.map.get_spawn_points()[11]]
-                # transform = random.choice(choices)
-                transform = self.map.get_spawn_points()[1] # 1 6 53
-                self.total_distance = 1000#780
+                transform = self.map.get_spawn_points()[1] #Town2 is 1
+                self.total_distance = 780
             else:
                 transform = random.choice(self.map.get_spawn_points())
                 self.total_distance = 250
 
             self.vehicle = self.world.try_spawn_actor(vehicle_bp, transform)
             self.actor_list.append(self.vehicle)
-            
+
+
             # Camera Sensor
             self.camera_obj = CameraSensor(self.vehicle)
-            image_obs = None
-            while(image_obs is None):
+            while(len(self.camera_obj.front_camera) == 0):
                 time.sleep(0.0001)
-                if len(self.camera_obj.front_camera) > 0:
-                    img = self.camera_obj.front_camera.pop(-1)
-                    processed_img = self.encoder.process_image(img)
-                    if not torch.any(torch.isinf(processed_img)):
-                        image_obs = processed_img
-
-            self.image_obs = image_obs
+            self.image_obs = self.camera_obj.front_camera.pop(-1)
             self.sensor_list.append(self.camera_obj.sensor)
 
             # Third person view of our vehicle in the Simulated env
@@ -100,6 +93,7 @@ class CarlaEnvironment():
             self.collision_history = self.collision_obj.collision_data
             self.sensor_list.append(self.collision_obj.sensor)
 
+            
             self.timesteps = 0
             self.rotation = self.vehicle.get_transform().rotation.yaw
             self.previous_location = self.vehicle.get_location()
@@ -146,21 +140,15 @@ class CarlaEnvironment():
                 transform = waypoint.transform
                 self.vehicle.set_transform(transform)
                 self.current_waypoint_index = self.checkpoint_waypoint_index
-                self.remove_pedestrians()
-                # self.create_pedestrians()
-                self.create_pedestrians_new(transform)
-            
-            # print("Vehicle Location:", self.vehicle.get_location())
-            self.navigation_obs = np.array([self.throttle, self.velocity, self.previous_steer, self.distance_from_center, self.angle])
-            
-            
-            # self.vehicle.get_transform().get_forward_vector(), 20.0)
 
+            self.navigation_obs = np.array([self.throttle, self.velocity, self.previous_steer, self.distance_from_center, self.angle])
+
+                        
             time.sleep(0.5)
             self.collision_history.clear()
 
             self.episode_start_time = time.time()
-            return self.encoder.process(self.image_obs, self.navigation_obs)
+            return [self.image_obs, self.navigation_obs]
 
         except:
             self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensor_list])
@@ -188,16 +176,13 @@ class CarlaEnvironment():
             velocity = self.vehicle.get_velocity()
             self.velocity = np.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2) * 3.6
             
-            # Action fro action space for contolling the vehicle with a discrete action
+            # Action fron action space for contolling the vehicle with a discrete action
             if self.continous_action_space:
                 steer = float(action_idx[0])
                 steer = max(min(steer, 1.0), -1.0)
                 throttle = float((action_idx[1] + 1.0)/2)
                 throttle = max(min(throttle, 1.0), 0.0)
-                smoothing_factor = 0.2
-                self.vehicle.apply_control(carla.VehicleControl(
-                    steer=self.previous_steer*(1-smoothing_factor) + steer*smoothing_factor, 
-                    throttle=self.throttle*0.8 + throttle*0.2))
+                self.vehicle.apply_control(carla.VehicleControl(steer=self.previous_steer*0.9 + steer*0.1, throttle=self.throttle*0.9 + throttle*0.1))
                 self.previous_steer = steer
                 self.throttle = throttle
             else:
@@ -223,6 +208,8 @@ class CarlaEnvironment():
             # Location of the car
             self.location = self.vehicle.get_location()
 
+
+            #transform = self.vehicle.get_transform()
             # Keep track of closest waypoint on the route
             waypoint_index = self.current_waypoint_index
             for _ in range(len(self.route_waypoints)):
@@ -247,7 +234,7 @@ class CarlaEnvironment():
             wp_fwd = self.vector(self.current_waypoint.transform.rotation.get_forward_vector())
             self.angle  = self.angle_diff(fwd, wp_fwd)
 
-            # Update checkpoint for training
+             # Update checkpoint for training
             if not self.fresh_start:
                 if self.checkpoint_frequency is not None:
                     self.checkpoint_waypoint_index = (self.current_waypoint_index // self.checkpoint_frequency) * self.checkpoint_frequency
@@ -298,18 +285,10 @@ class CarlaEnvironment():
                         self.checkpoint_frequency = None
                         self.checkpoint_waypoint_index = 0
 
-            image_obs = None
-            while(image_obs is None):
+            while(len(self.camera_obj.front_camera) == 0):
                 time.sleep(0.0001)
-                if len(self.camera_obj.front_camera) > 0:
-                    img = self.camera_obj.front_camera.pop(-1)
-                    processed_img = self.encoder.process_image(img)
-                    if not torch.any(torch.isinf(processed_img)):
-                        image_obs = processed_img
-                    else:
-                        image_obs = self.image_obs
-                                
-            self.image_obs = image_obs
+
+            self.image_obs = self.camera_obj.front_camera.pop(-1)
             normalized_velocity = self.velocity/self.target_speed
             normalized_distance_from_center = self.distance_from_center / self.max_distance_from_center
             normalized_angle = abs(self.angle / np.deg2rad(20))
@@ -328,7 +307,7 @@ class CarlaEnvironment():
                 for actor in self.actor_list:
                     actor.destroy()
             
-            return self.encoder.process(self.image_obs, self.navigation_obs), reward, done, [self.distance_covered, self.center_lane_deviation]
+            return [self.image_obs, self.navigation_obs], reward, done, [self.distance_covered, self.center_lane_deviation]
 
         except:
             self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensor_list])
