@@ -3,7 +3,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-from encoder_init import EncodeState
+# from encoder_init import EncodeState
 from networks.on_policy.ppo.ppo import ActorCritic
 from parameters import  *
 
@@ -36,7 +36,7 @@ class PPOAgent(object):
         self.n_updates_per_iteration = 7
         self.lr = PPO_LEARNING_RATE
         self.action_std = action_std_init
-        self.encode = EncodeState(LATENT_DIM)
+        # self.encode = EncodeState(LATENT_DIM)
         self.memory = Buffer()
         self.town = town
 
@@ -53,17 +53,26 @@ class PPOAgent(object):
 
 
     def get_action(self, obs, train):
-
         with torch.no_grad():
-            if isinstance(obs, np.ndarray):
-                obs = torch.tensor(obs, dtype=torch.float)
-            action, logprob = self.old_policy.get_action_and_log_prob(obs.to(device))
-        if train:
-            self.memory.observation.append(obs.to(device))
-            self.memory.actions.append(action)
-            self.memory.log_probs.append(logprob)
+            if isinstance(obs, list):
+                obs_tensors = [torch.tensor(o, dtype=torch.float, device=device) for o in obs]
+            elif isinstance(obs, np.ndarray):
+                obs_tensors = [torch.tensor(obs, dtype=torch.float, device=device)]
+            else:
+                obs_tensors = [obs.to(device)]
 
-        return action.detach().cpu().numpy().flatten()
+            actions, logprobs = [], []
+            for obs in obs_tensors:
+                action, logprob = self.old_policy.get_action_and_log_prob(obs)
+                actions.append(action)
+                logprobs.append(logprob)
+
+        if train:
+            self.memory.observation.extend(obs_tensors)
+            self.memory.actions.extend(actions)
+            self.memory.log_probs.extend(logprobs)
+
+        return torch.stack(actions).detach().cpu().numpy().flatten()
     
     def set_action_std(self, new_action_std):
         self.action_std = new_action_std
@@ -140,10 +149,10 @@ class PPOAgent(object):
             self.checkpoint_file_no -=1
         checkpoint_file = PPO_CHECKPOINT_DIR+self.town+"/ppo_policy_" + str(self.checkpoint_file_no)+"_.pth"
         torch.save(self.old_policy.state_dict(), checkpoint_file)
-   
+    
     def load(self):
         self.checkpoint_file_no = len(next(os.walk(PPO_CHECKPOINT_DIR+self.town))[2]) - 1
         checkpoint_file = PPO_CHECKPOINT_DIR+self.town+"/ppo_policy_" + str(self.checkpoint_file_no)+"_.pth"
         self.old_policy.load_state_dict(torch.load(checkpoint_file))
         self.policy.load_state_dict(torch.load(checkpoint_file))
-            
+
