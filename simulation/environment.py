@@ -68,7 +68,7 @@ class CarlaEnvironment():
                 # choices = [self.map.get_spawn_points()[6], self.map.get_spawn_points()[11]]
                 # transform = random.choice(choices)
                 transform = self.map.get_spawn_points()[1] # 1 6 53
-                self.total_distance = 1000#780
+                self.total_distance = 780
             else:
                 transform = random.choice(self.map.get_spawn_points())
                 self.total_distance = 250
@@ -146,9 +146,9 @@ class CarlaEnvironment():
                 transform = waypoint.transform
                 self.vehicle.set_transform(transform)
                 self.current_waypoint_index = self.checkpoint_waypoint_index
-                self.remove_pedestrians()
+                # self.remove_pedestrians()
                 # self.create_pedestrians()
-                self.create_pedestrians_new(transform)
+                # self.create_pedestrians_new(transform)
             
             # print("Vehicle Location:", self.vehicle.get_location())
             self.navigation_obs = np.array([self.throttle, self.velocity, self.previous_steer, self.distance_from_center, self.angle])
