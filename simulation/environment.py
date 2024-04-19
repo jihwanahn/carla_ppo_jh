@@ -188,13 +188,13 @@ class CarlaEnvironment():
             velocity = self.vehicle.get_velocity()
             self.velocity = np.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2) * 3.6
             
-            # Action fron action space for contolling the vehicle with a discrete action
+            # Action fro action space for contolling the vehicle with a discrete action
             if self.continous_action_space:
                 steer = float(action_idx[0])
                 steer = max(min(steer, 1.0), -1.0)
                 throttle = float((action_idx[1] + 1.0)/2)
                 throttle = max(min(throttle, 1.0), 0.0)
-                smoothing_factor = 0.1
+                smoothing_factor = 0.2
                 self.vehicle.apply_control(carla.VehicleControl(
                     steer=self.previous_steer*(1-smoothing_factor) + steer*smoothing_factor, 
                     throttle=self.throttle*0.8 + throttle*0.2))
@@ -616,3 +616,4 @@ class CarlaEnvironment():
         self.client.apply_batch([carla.command.DestroyActor(x) for x in self.walker_list])
         self.walker_list.clear()
         self.walker_controller_list.clear()
+
