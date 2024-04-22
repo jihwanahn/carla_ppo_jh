@@ -11,7 +11,7 @@ device = torch.device("cpu")
 
 class Buffer:
     def __init__(self):
-         # Batch data
+        # Batch data
         self.observation = []  
         self.actions = []         
         self.log_probs = []     
@@ -26,7 +26,7 @@ class Buffer:
         del self.dones[:]
 
 class PPOAgent(object):
-    def __init__(self, town, action_std_init=0.4):
+    def __init__(self, town, run_name, action_std_init=0.4):
         
         #self.env = env
         self.obs_dim = 100
@@ -39,6 +39,7 @@ class PPOAgent(object):
         # self.encode = EncodeState(LATENT_DIM)
         self.memory = Buffer()
         self.town = town
+        self.run_name = run_name
 
         self.checkpoint_file_no = 0
         
@@ -140,19 +141,19 @@ class PPOAgent(object):
     
     def save(self):
         self.checkpoint_file_no = len(next(os.walk(PPO_CHECKPOINT_DIR+self.town))[2])
-        checkpoint_file = PPO_CHECKPOINT_DIR+self.town+"/ppo_policy_" + str(self.checkpoint_file_no)+"_.pth"
+        checkpoint_file = f'{PPO_CHECKPOINT_DIR}+{self.town}+"/{self.run_name}_policy_" + str({self.checkpoint_file_no})+"_.pth"'
         torch.save(self.old_policy.state_dict(), checkpoint_file)
 
     def chkpt_save(self):
         self.checkpoint_file_no = len(next(os.walk(PPO_CHECKPOINT_DIR+self.town))[2])
         if self.checkpoint_file_no !=0:
             self.checkpoint_file_no -=1
-        checkpoint_file = PPO_CHECKPOINT_DIR+self.town+"/ppo_policy_" + str(self.checkpoint_file_no)+"_.pth"
+        checkpoint_file = f'{PPO_CHECKPOINT_DIR}+{self.town}+"/{self.run_name}_policy_" + str({self.checkpoint_file_no})+"_.pth"'
         torch.save(self.old_policy.state_dict(), checkpoint_file)
     
     def load(self):
         self.checkpoint_file_no = len(next(os.walk(PPO_CHECKPOINT_DIR+self.town))[2]) - 1
-        checkpoint_file = PPO_CHECKPOINT_DIR+self.town+"/ppo_policy_" + str(self.checkpoint_file_no)+"_.pth"
+        checkpoint_file = f'{PPO_CHECKPOINT_DIR}+{self.town}+"/{self.run_name}_policy_" + str({self.checkpoint_file_no})+"_.pth"'
         self.old_policy.load_state_dict(torch.load(checkpoint_file))
         self.policy.load_state_dict(torch.load(checkpoint_file))
 

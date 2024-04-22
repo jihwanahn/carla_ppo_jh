@@ -1,23 +1,36 @@
 import sys
 import torch
 from autoencoder.encoder import VariationalEncoder
+from cnn.encoder import CNNEncoder
+from transformer.encoder import TransformerEncoder
 import numpy as np
 
 class EncodeState():
-    def __init__(self, latent_dim):
+    def __init__(self, run_name='ppo_vae', latent_dim=64):
+        self.run_name = run_name
         self.latent_dim = latent_dim
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         try:
-            self.conv_encoder = VariationalEncoder(self.latent_dim).to(self.device)
-            self.conv_encoder.load()
-            self.conv_encoder.eval()
+            if self.run_name == "ppo_vae":
+                self.encoder = VariationalEncoder(self.latent_dim).to(self.device)
+                self.encoder.load()
+                # self.conv_encoder.eval()
 
-            for params in self.conv_encoder.parameters():
-                params.requires_grad = False
+                # for params in self.conv_encoder.parameters():
+                #     params.requires_grad = False
+            elif self.run_name == "ppo_cnn":
+                pass
+            elif self.run_name == "ppo_transformer":
+                pass
+            
+            self.encoder.eval()
+            for params in self.encoder.parameters():
+                    params.requires_grad = False
+        
         except:
             print('Encoder could not be initialized.')
-    
+
     def process_image(self, image):
         image_obs = torch.tensor(image, dtype=torch.float).to(self.device)
         image_obs = image_obs.unsqueeze(0)

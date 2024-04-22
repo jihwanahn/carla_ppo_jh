@@ -24,8 +24,7 @@ class Decoder(nn.Module):
             nn.LeakyReLU(),
             nn.ConvTranspose2d(128, 64, 4,  stride=2),
             nn.LeakyReLU(),
-            nn.ConvTranspose2d(64, 32, 3, stride=2,
-                               padding=1),
+            nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1),
             nn.LeakyReLU(),
             nn.ConvTranspose2d(32, 3, 4, stride=2),
             nn.Sigmoid())
