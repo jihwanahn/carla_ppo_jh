@@ -9,7 +9,7 @@ class CNNEncoder(nn.Module):
     def __init__(self, latent_dims):
         super(CNNEncoder, self).__init__()
         self.model_file = os.path.join('cnn/model', 'resnet_encoder.pth')
-
+        
         original_model = models.resnet18(pretrained=True)
         self.features = nn.Sequential(*list(original_model.children())[:-1])  # 마지막 fc layer 제외
         self.dropout = nn.Dropout(0.5)

@@ -1,15 +1,26 @@
 import sys
 import torch
 from autoencoder.encoder import VariationalEncoder
+from cnn.encoder import CNNEncoder
+from transformer.encoder import TransformerEncoder
 
+#run_name
 class EncodeState():
-    def __init__(self, latent_dim):
+    def __init__(self, latent_dim, run_name):
         self.latent_dim = latent_dim
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         try:
-            self.conv_encoder = VariationalEncoder(self.latent_dim).to(self.device)
-            self.conv_encoder.load()
+            if run_name == "PPO":
+                self.conv_encoder = VariationalEncoder(self.latent_dim).to(self.device)
+                self.conv_encoder.load()
+            elif run_name == "CNN":
+                self.conv_encoder = CNNEncoder(self.latent_dim).to(self.device)
+                self.conv_encoder.load()
+            elif run_name == "Transformer":
+                print('Transformer encoder not implemented yet.')
+                pass
+
             self.conv_encoder.eval()
 
             for params in self.conv_encoder.parameters():

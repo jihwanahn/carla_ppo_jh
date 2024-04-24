@@ -21,7 +21,7 @@ from simulation.settings import PORT
 def parse_args():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp-name', type=str, default='ppo_vae', help='name of the experiment')
+    parser.add_argument('--exp-name', type=str, default='vae', help='name of the experiment')
     parser.add_argument('--env-name', type=str, default='carla', help='name of the simulation environment')
     parser.add_argument('--learning-rate', type=float, default=PPO_LEARNING_RATE, help='learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=SEED, help='seed of the experiment')
@@ -62,12 +62,12 @@ def runner():
     
     # run_name = exp_name
     try:
-        if exp_name == "ppo_vae":
-            run_name = "ppo_vae"
-        elif exp_name == "ppo_cnn":
-            run_name = "ppo_cnn"
-        elif exp_name == "ppo_transformer":
-            run_name = "ppo_transformer"
+        if exp_name == "vae":
+            run_name = "vae"
+        elif exp_name == "cnn":
+            run_name = "cnn"
+        elif exp_name == "transformer":
+            run_name = "transformer"
     #         """
             
     #         Here the functionality can be extended to different algorithms.

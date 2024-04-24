@@ -20,7 +20,7 @@ from parameters import *
 def parse_args():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp-name', type=str, default='ppo', help='name of the experiment')
+    parser.add_argument('--exp-name', type=str, help='name of the experiment')
     parser.add_argument('--env-name', type=str, default='carla', help='name of the simulation environment')
     parser.add_argument('--learning-rate', type=float, default=PPO_LEARNING_RATE, help='learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=SEED, help='seed of the experiment')
@@ -61,7 +61,12 @@ def runner():
     try:
         if exp_name == 'ppo':
             run_name = "PPO"
+        elif exp_name == 'cnn':
+            run_name = "CNN"
+        elif exp_name == 'transformer':
+            run_name = "Transformer"
         else:
+            raise ValueError("Invalid experiment name.")
             """
             
             Here the functionality can be extended to different algorithms.
@@ -73,9 +78,9 @@ def runner():
         sys.exit()
     
     if train == True:
-        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}/{town}")
+        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
     else:
-        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}_TEST/{town}")
+        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}_TEST/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}" for key, value in vars(args).items()])))
@@ -113,7 +118,7 @@ def runner():
         env = CarlaEnvironment(client, world,town)
     else:
         env = CarlaEnvironment(client, world,town, checkpoint_frequency=None)
-    encode = EncodeState(LATENT_DIM)
+    encode = EncodeState(LATENT_DIM, run_name)
 
 
     #========================================================================
@@ -293,9 +298,9 @@ def runner():
 
 
 if __name__ == "__main__":
-    # try:        
+    try:        
         runner()
-    # except KeyboardInterrupt:
-    #     sys.exit()
-    # finally:
-    #     print('\nExit')
+    except KeyboardInterrupt:
+        sys.exit()
+    finally:
+        print('\nExit')
