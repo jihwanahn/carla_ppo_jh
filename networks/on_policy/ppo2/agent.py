@@ -7,6 +7,7 @@ from networks.on_policy.ppo2.ppo import ActorCritic
 from parameters import  *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 
 class Buffer:
     def __init__(self):
@@ -25,7 +26,7 @@ class Buffer:
         del self.dones[:]
 
 class PPOAgent(object):
-    def __init__(self, channels, height, width, action_dim, action_std_init=0.4):
+    def __init__(self, town, channels, height, width, action_dim, action_std_init=0.4):
         self.channels = channels
         self.height = height
         self.width = width
@@ -36,6 +37,8 @@ class PPOAgent(object):
         self.lr = PPO_LEARNING_RATE
         self.action_std = action_std_init
         self.memory = Buffer()
+        self.town = town
+        self.checkpoint_file_no = 0
 
         self.policy = ActorCritic(channels, height, width, action_dim, action_std_init).to(device)
         self.optimizer = torch.optim.Adam([
@@ -88,37 +91,56 @@ class PPOAgent(object):
         self.set_action_std(self.action_std)
 
     def learn(self):
-        rewards = [0] * len(self.memory.rewards)
+
+        # Monte Carlo estimate of returns
+        rewards = []
         discounted_reward = 0
-        for i in reversed(range(len(self.memory.rewards))):
-            if self.memory.dones[i]:
+        for reward, is_terminal in zip(reversed(self.memory.rewards), reversed(self.memory.dones)):
+            if is_terminal:
                 discounted_reward = 0
-            discounted_reward = self.memory.rewards[i] + (self.gamma * discounted_reward)
-            rewards[i] = discounted_reward
-        
-        rewards = torch.tensor(rewards, dtype=torch.float32, device=device)
+            discounted_reward = reward + (self.gamma * discounted_reward)
+            rewards.insert(0, discounted_reward)
+            
+        # Normalizing the rewards
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
 
-        old_states = torch.stack(self.memory.observation).detach()
-        old_actions = torch.stack(self.memory.actions).detach()
-        old_logprobs = torch.stack(self.memory.log_probs).detach()
+        # convert list to tensor
+        old_states = torch.squeeze(torch.stack(self.memory.observation, dim=0)).detach().to(device)
+        old_actions = torch.squeeze(torch.stack(self.memory.actions, dim=0)).detach().to(device)
+        old_logprobs = torch.squeeze(torch.stack(self.memory.log_probs, dim=0)).detach().to(device)
 
+        
+        # Optimize policy for K epochs
         for _ in range(self.n_updates_per_iteration):
-            logprobs, values, dist_entropy = self.policy.evaluate(old_states, old_actions)
-            values = values.squeeze()
 
+            # Evaluating old actions and values
+            logprobs, values, dist_entropy = self.policy.evaluate(old_states, old_actions)
+
+            # match values tensor dimensions with rewards tensor
+            values = torch.squeeze(values)
+            
+            # Finding the ratio (pi_theta / pi_theta__old)
             ratios = torch.exp(logprobs - old_logprobs.detach())
-            advantages = rewards - values.detach()
+
+            # Finding Surrogate Loss
+            advantages = rewards - values.detach()   
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.clip, 1+self.clip) * advantages
-            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(values, rewards) - 0.01 * dist_entropy
 
+            # final loss of clipped objective PPO
+            loss = -torch.min(surr1, surr2) + 0.5*self.MseLoss(values, rewards) - 0.01*dist_entropy
+            
+            # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
 
         self.old_policy.load_state_dict(self.policy.state_dict())
         self.memory.clear()
+
+
+
 
     def save(self):
         # Ensure directory exists

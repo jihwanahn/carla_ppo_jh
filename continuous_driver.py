@@ -21,7 +21,7 @@ from simulation.settings import PORT
 def parse_args():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp-name', type=str, default='ppo', help='name of the experiment')
+    parser.add_argument('--exp-name', type=str, default='ppo_vae', help='name of the experiment')
     parser.add_argument('--env-name', type=str, default='carla', help='name of the simulation environment')
     parser.add_argument('--learning-rate', type=float, default=PPO_LEARNING_RATE, help='learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=SEED, help='seed of the experiment')
@@ -59,19 +59,21 @@ def runner():
     checkpoint_load = args.load_checkpoint
     total_timesteps = args.total_timesteps
     action_std_init = args.action_std_init
-
-    try:
-        if exp_name == 'ppo':
-            run_name = "PPO"
-        else:
-            """
+    
+    run_name = exp_name
+    # try:
+    #     if exp_name == 'ppo_vae':
+    #         run_name = "ppo_vae"
+    #     elif exp_name == 'ppo_transformer':
+    #         run_name = "ppo_transformer"
+    #         """
             
-            Here the functionality can be extended to different algorithms.
+    #         Here the functionality can be extended to different algorithms.
 
-            """ 
-            # sys.exit() 
-    except Exception as e:
-        raise e
+    #         """ 
+    #         # sys.exit() 
+    # except Exception as e:
+    #     raise e
         # print(e.message)
         # sys.exit()
     
@@ -113,7 +115,8 @@ def runner():
         logging.error("Connection has been refused by the server.")
         ConnectionRefusedError
 
-    encode = EncodeState(LATENT_DIM)
+    
+    encode = EncodeState(run_name, LATENT_DIM)
     if train:
         env = CarlaEnvironment(client, world,town, encoder=encode)
     else:
@@ -128,24 +131,24 @@ def runner():
         time.sleep(0.5)
         
         if checkpoint_load:
-            chkt_file_nums = len(next(os.walk(f'checkpoints/PPO/{town}'))[2]) - 1
-            chkpt_file = f'checkpoints/PPO/{town}/checkpoint_ppo_'+str(chkt_file_nums)+'.pickle'
+            chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{town}'))[2]) - 1
+            chkpt_file = f'checkpoints/{run_name}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
             with open(chkpt_file, 'rb') as f:
                 data = pickle.load(f)
                 episode = data['episode']
                 timestep = data['timestep']
                 cumulative_score = data['cumulative_score']
                 action_std_init = data['action_std_init']
-            agent = PPOAgent(town, action_std_init)
+            agent = PPOAgent(town, run_name, action_std_init)
             agent.load()
         else:
             if train == False:
-                agent = PPOAgent(town, action_std_init)
+                agent = PPOAgent(town, run_name, action_std_init)
                 agent.load()
                 for params in agent.old_policy.actor.parameters():
                     params.requires_grad = False
             else:
-                agent = PPOAgent(town, action_std_init)
+                agent = PPOAgent(town, run_name, action_std_init)
         if train:
             #Training
             while timestep < total_timesteps:
