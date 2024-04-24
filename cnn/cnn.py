@@ -8,7 +8,7 @@ from torchvision import datasets
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
-from encoder import ResNetEncoder
+from encoder import CNNEncoder
 from decoder import SimpleDecoder
 from datetime import datetime
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
@@ -28,7 +28,7 @@ class ResNetAutoencoder(nn.Module):
     def __init__(self, latent_dims):
         super(ResNetAutoencoder, self).__init__()
         self.model_file = os.path.join('cnn/model', 'resnet_autoencoder.pth')
-        self.encoder = ResNetEncoder(latent_dims)
+        self.encoder = CNNEncoder(latent_dims)
         self.decoder = SimpleDecoder(latent_dims)
 
     def forward(self, x):

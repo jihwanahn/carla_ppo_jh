@@ -5,9 +5,9 @@ import torchvision.models as models
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-class ResNetEncoder(nn.Module):
+class CNNEncoder(nn.Module):
     def __init__(self, latent_dims):
-        super(ResNetEncoder, self).__init__()
+        super(CNNEncoder, self).__init__()
         self.model_file = os.path.join('cnn/model', 'resnet_encoder.pth')
 
         original_model = models.resnet18(pretrained=True)

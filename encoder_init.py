@@ -6,7 +6,7 @@ from transformer.encoder import TransformerEncoder
 import numpy as np
 
 class EncodeState():
-    def __init__(self, run_name='ppo_vae', latent_dim=64):
+    def __init__(self, run_name="ppo_vae", latent_dim=64):
         self.run_name = run_name
         self.latent_dim = latent_dim
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -20,13 +20,16 @@ class EncodeState():
                 # for params in self.conv_encoder.parameters():
                 #     params.requires_grad = False
             elif self.run_name == "ppo_cnn":
-                pass
+                self.encoder = CNNEncoder(self.latent_dim).to(self.device)
+                self.encoder.load()
             elif self.run_name == "ppo_transformer":
-                pass
+                self.encoder = TransformerEncoder(self.latent_dim).to(self.device)
+                self.encoder.load()
+                
             
             self.encoder.eval()
             for params in self.encoder.parameters():
-                    params.requires_grad = False
+                params.requires_grad = False
         
         except:
             print('Encoder could not be initialized.')
