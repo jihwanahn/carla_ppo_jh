@@ -9,8 +9,8 @@ import torchvision.transforms as transforms
 from torchvision import datasets
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
-from encoder import ResNetEncoder
-from decoder import SimpleDecoder
+from encoder import CNNEncoder
+from decoder import CNNDecoder
 from PIL import Image
 
 # Hyper-parameters
@@ -34,12 +34,12 @@ def unnormalize(img):
     img = img.clamp(0, 1)
     return img
 
-class ResNetAutoencoder(nn.Module):
+class CNNEncoder(nn.Module):
     def __init__(self, latent_dims):
-        super(ResNetAutoencoder, self).__init__()
+        super(CNNEncoder, self).__init__()
         self.model_file = os.path.join('cnn/model', 'resnet_autoencoder.pth')
-        self.encoder = ResNetEncoder(latent_dims)
-        self.decoder = SimpleDecoder(latent_dims)
+        self.encoder = CNNEncoder(latent_dims)
+        self.decoder = CNNDecoder(latent_dims)
 
     def forward(self, x):
         x = x.to(device)
@@ -65,7 +65,7 @@ def main():
 
     testloader = torch.utils.data.DataLoader(test_data, batch_size=BATCH_SIZE)
 
-    model = ResNetAutoencoder(latent_dims=LATENT_SPACE).to(device)
+    model = CNNEncoder(latent_dims=LATENT_SPACE).to(device)
     model.load()
 
     count = 1

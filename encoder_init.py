@@ -1,7 +1,7 @@
 import sys
 import torch
 from autoencoder.encoder import VariationalEncoder
-from cnn.encoder import ResNetEncoder
+from cnn.encoder import CNNEncoder
 from transformer.encoder import TransformerEncoder
 import numpy as np
 

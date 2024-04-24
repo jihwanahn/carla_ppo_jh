@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 from encoder import CNNEncoder
-from decoder import SimpleDecoder
+from decoder import CNNDecoder
 from datetime import datetime
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 from pytorch_msssim import ssim, MS_SSIM
@@ -24,12 +24,12 @@ LATENT_SPACE = 95  # ResNet18의 fc layer 차원에 맞추어 조정
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class ResNetAutoencoder(nn.Module):
+class CNNAutoencoder(nn.Module):
     def __init__(self, latent_dims):
-        super(ResNetAutoencoder, self).__init__()
+        super(CNNAutoencoder, self).__init__()
         self.model_file = os.path.join('cnn/model', 'resnet_autoencoder.pth')
         self.encoder = CNNEncoder(latent_dims)
-        self.decoder = SimpleDecoder(latent_dims)
+        self.decoder = CNNDecoder(latent_dims)
 
     def forward(self, x):
         x = x.to(device)
@@ -116,7 +116,7 @@ def main():
     validloader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
     testloader = DataLoader(test_data, batch_size=BATCH_SIZE)
 
-    model = ResNetAutoencoder(latent_dims=LATENT_SPACE).to(device)
+    model = CNNAutoencoder(latent_dims=LATENT_SPACE).to(device)
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     criterion = nn.SmoothL1Loss()
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.1, patience=5, verbose=True)

@@ -4,7 +4,7 @@ import torch.nn as nn
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-class SimpleDecoder(nn.Module):
+class CNNDecoder(nn.Module):
     def __init__(self, latent_dims):
         super().__init__()
         self.model_file = os.path.join('cnn/model', 'simple_decoder.pth')
