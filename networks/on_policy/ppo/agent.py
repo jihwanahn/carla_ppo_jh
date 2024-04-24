@@ -59,7 +59,7 @@ class PPOAgent(object):
             elif isinstance(obs, np.ndarray):
                 obs_tensors = [torch.tensor(obs, dtype=torch.float, device=device)]
             else:
-                obs_tensors = [obs.to(device)]
+                obs_tensors = [obs.to(device)] # AttributeError: 'NoneType' object has no attribute 'to' 발생
 
             actions, logprobs = [], []
             for obs in obs_tensors:
