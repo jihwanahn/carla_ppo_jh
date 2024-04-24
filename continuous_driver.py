@@ -60,23 +60,27 @@ def runner():
     total_timesteps = args.total_timesteps
     action_std_init = args.action_std_init
     
-    run_name = exp_name
-    # try:
-    #     if exp_name == 'ppo_vae':
-    #         run_name = "ppo_vae"
-    #     elif exp_name == 'ppo_transformer':
-    #         run_name = "ppo_transformer"
+    # run_name = exp_name
+    try:
+        if exp_name == "ppo_vae":
+            run_name = "ppo_vae"
+        elif exp_name == "ppo_cnn":
+            run_name = "ppo_cnn"
+        elif exp_name == "ppo_transformer":
+            run_name = "ppo_transformer"
     #         """
             
     #         Here the functionality can be extended to different algorithms.
 
     #         """ 
     #         # sys.exit() 
-    # except Exception as e:
-    #     raise e
+    except Exception as e:
+        raise e
         # print(e.message)
         # sys.exit()
     
+    print(run_name)
+
     if train == True:
         writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
     else:
@@ -153,7 +157,7 @@ def runner():
             #Training
             while timestep < total_timesteps:
             
-                observation = env.reset()
+                observation = env.reset() # observation 이 NoneType으로 반환되고 있음
 
                 current_ep_reward = 0
                 t1 = datetime.now()

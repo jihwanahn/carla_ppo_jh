@@ -10,22 +10,18 @@ import torch
 from distutils.util import strtobool
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
-from networks.on_policy.ppo2.agent import PPOAgent
+from encoder_init_new import EncodeState
+from networks.on_policy.ppo.agent import PPOAgent
 from simulation.connection import ClientConnection
 from simulation.environment_new import CarlaEnvironment
 from parameters import *
-from simulation.settings import PORT                                                                                                                                                                                
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def parse_args():
     
-    parser = argparse.ArgumentParser(description='PPO with CNN Agent Runner')
+    parser = argparse.ArgumentParser()
     parser.add_argument('--exp-name', type=str, default='ppo', help='name of the experiment')
-    parser.add_argument('--channels', type=int, default=3, help='number of channels in the image')
-    parser.add_argument('--height', type=int, default=120, help='height of the image')
-    parser.add_argument('--width', type=int, default=160, help='width of the image')
-    parser.add_argument('--action-dim', type=int, default=2, help='dimension of the action space')
+    parser.add_argument('--env-name', type=str, default='carla', help='name of the simulation environment')
     parser.add_argument('--learning-rate', type=float, default=PPO_LEARNING_RATE, help='learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=SEED, help='seed of the experiment')
     parser.add_argument('--total-timesteps', type=int, default=TOTAL_TIMESTEPS, help='total timesteps of the experiment')
@@ -33,11 +29,10 @@ def parse_args():
     parser.add_argument('--test-timesteps', type=int, default=TEST_TIMESTEPS, help='timesteps to test our model')
     parser.add_argument('--episode-length', type=int, default=EPISODE_LENGTH, help='max timesteps in an episode')
     parser.add_argument('--train', default=True, type=boolean_string, help='is it training?')
-    parser.add_argument('--town', type=str, default="Town02", help='which town do you like?')
+    parser.add_argument('--town', type=str, default="Town07", help='which town do you like?')
     parser.add_argument('--load-checkpoint', type=bool, default=MODEL_LOAD, help='resume training?')
     parser.add_argument('--torch-deterministic', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, help='if toggled, `torch.backends.cudnn.deterministic=False`')
     parser.add_argument('--cuda', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, help='if toggled, cuda will not be enabled by deafult')
-    parser.add_argument('--port', type=int, default=PORT, help='port number of the server')
     args = parser.parse_args()
     
     return args
@@ -48,7 +43,13 @@ def boolean_string(s):
     return s == 'True'
 
 
-def runner():    
+
+def runner():
+
+    #========================================================================
+    #                           BASIC PARAMETER & LOGGING SETUP
+    #========================================================================
+    
     args = parse_args()
     exp_name = args.exp_name
     train = args.train
@@ -57,22 +58,35 @@ def runner():
     total_timesteps = args.total_timesteps
     action_std_init = args.action_std_init
 
-    logging.basicConfig(level=logging.INFO)
-    
+    try:
+        if exp_name == 'ppo':
+            run_name = "PPO"
+        else:
+            """
+            
+            Here the functionality can be extended to different algorithms.
+
+            """ 
+            sys.exit() 
+    except Exception as e:
+        print(e.message)
+        sys.exit()
     
     if train == True:
-        writer = SummaryWriter(f"runs/{exp_name}_{action_std_init}_{total_timesteps}/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
+        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}/{town}")
     else:
-        writer = SummaryWriter(f"runs/{exp_name}_{action_std_init}_{int(total_timesteps)}_TEST/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
+        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}_TEST/{town}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}" for key, value in vars(args).items()])))
 
 
+    #Seeding to reproduce the results 
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = args.torch_deterministic
+
     
     action_std_decay_rate = 0.05
     min_action_std = 0.05   
@@ -81,30 +95,35 @@ def runner():
     episode = 0
     cumulative_score = 0
     episodic_length = list()
-    scores = []
+    scores = list()
     deviation_from_center = 0
     distance_covered = 0
 
+    #========================================================================
+    #                           CREATING THE SIMULATION
+    #========================================================================
 
     try:
-        client, world = ClientConnection(town, port=args.port).setup()
-    except Exception as e:
+        client, world = ClientConnection(town).setup()
+        logging.info("Connection has been setup successfully.")
+    except:
         logging.error("Connection has been refused by the server.")
         ConnectionRefusedError
-
-    # encode = EncodeState(LATENT_DIM)
     if train:
-        env = CarlaEnvironment(client, world,town)#, encoder=encode)
+        env = CarlaEnvironment(client, world,town)
     else:
         env = CarlaEnvironment(client, world,town, checkpoint_frequency=None)
-        # env = CarlaEnvironment(client, world,town, checkpoint_frequency=None)
+    encode = EncodeState(LATENT_DIM)
 
 
+    #========================================================================
+    #                           ALGORITHM
+    #========================================================================
     try:
-        # time.sleep(0.5)
+        time.sleep(0.5)
         
         if checkpoint_load:
-            chkt_file_nums = len(next(os.walk(f'checkpoints/PPO_cnn/{town}'))[2]) - 1
+            chkt_file_nums = len(next(os.walk(f'checkpoints/PPO/{town}'))[2]) - 1
             chkpt_file = f'checkpoints/PPO/{town}/checkpoint_ppo_'+str(chkt_file_nums)+'.pickle'
             with open(chkpt_file, 'rb') as f:
                 data = pickle.load(f)
@@ -112,38 +131,35 @@ def runner():
                 timestep = data['timestep']
                 cumulative_score = data['cumulative_score']
                 action_std_init = data['action_std_init']
-            agent = PPOAgent(args.channels, args.height, args.width, args.action_dim, args.action_std_init)
+            agent = PPOAgent(town, action_std_init)
             agent.load()
         else:
             if train == False:
-                agent = PPOAgent(args.channels, args.height, args.width, args.action_dim, args.action_std_init)
+                agent = PPOAgent(town, action_std_init)
                 agent.load()
                 for params in agent.old_policy.actor.parameters():
                     params.requires_grad = False
             else:
-                agent = PPOAgent(args.channels, args.height, args.width, args.action_dim, args.action_std_init)
+                agent = PPOAgent(town, action_std_init)
         if train:
             #Training
             while timestep < total_timesteps:
             
                 observation = env.reset()
+                observation = encode.process(observation)
+
                 current_ep_reward = 0
                 t1 = datetime.now()
 
                 for t in range(args.episode_length):
-                    # print("Type of observation:", type(observation))
-                    # print("Observation data:", observation)
-                    if isinstance(observation, list):
-                        # Assuming the first item in the list is the tensor we need to process
-                        tensor_obs = observation[0].to(device) if isinstance(observation[0], torch.Tensor) else torch.tensor(observation[0], device=device)
-                    else:
-                        tensor_obs = observation.to(device)
-                        
+                
+                    # select action with policy
                     action = agent.get_action(observation, train=True)
+
                     observation, reward, done, info = env.step(action)
-                    
                     if observation is None:
                         break
+                    observation = encode.process(observation)
                     
                     agent.memory.rewards.append(reward)
                     agent.memory.dones.append(done)
@@ -157,6 +173,7 @@ def runner():
                     if timestep == total_timesteps -1:
                         agent.chkpt_save()
 
+                    # break; if the episode is over
                     if done:
                         episode += 1
 
@@ -176,15 +193,12 @@ def runner():
                 else:
                     cumulative_score = np.mean(scores)
 
-                print('Episode: {}'.format(episode),', Timestep: {}'.format(timestep),', Reward:  {:.2f}'.format(current_ep_reward),', Average Reward:  {:.2f}'.format(cumulative_score))
-                
 
+                print('Episode: {}'.format(episode),', Timestep: {}'.format(timestep),', Reward:  {:.2f}'.format(current_ep_reward),', Average Reward:  {:.2f}'.format(cumulative_score))
                 if episode % 10 == 0:
                     agent.learn()
                     agent.chkpt_save()
-                    chkpt_dir = f'checkpoints/PPO/{town}'
-                    os.makedirs(chkpt_dir, exist_ok=True)
-                    chkt_file_nums = len(next(os.walk(chkpt_dir))[2])
+                    chkt_file_nums = len(next(os.walk(f'checkpoints/PPO/{town}'))[2])
                     if chkt_file_nums != 0:
                         chkt_file_nums -=1
                     chkpt_file = f'checkpoints/PPO/{town}/checkpoint_ppo_'+str(chkt_file_nums)+'.pickle'
@@ -194,6 +208,7 @@ def runner():
                     
                 
                 if episode % 5 == 0:
+
                     writer.add_scalar("Episodic Reward/episode", scores[-1], episode)
                     writer.add_scalar("Cumulative Reward/info", cumulative_score, episode)
                     writer.add_scalar("Cumulative Reward/(t)", cumulative_score, timestep)
@@ -210,8 +225,8 @@ def runner():
                     deviation_from_center = 0
                     distance_covered = 0
 
-
                 if episode % 100 == 0:
+                    
                     agent.save()
                     chkt_file_nums = len(next(os.walk(f'checkpoints/PPO/{town}'))[2])
                     chkpt_file = f'checkpoints/PPO/{town}/checkpoint_ppo_'+str(chkt_file_nums)+'.pickle'
@@ -220,11 +235,12 @@ def runner():
                         pickle.dump(data_obj, handle)
                         
             print("Terminating the run.")
-            # sys.exit()
+            sys.exit()
         else:
             #Testing
             while timestep < args.test_timesteps:
                 observation = env.reset()
+                observation = encode.process(observation)
 
                 current_ep_reward = 0
                 t1 = datetime.now()
@@ -234,6 +250,7 @@ def runner():
                     observation, reward, done, info = env.step(action)
                     if observation is None:
                         break
+                    observation = encode.process(observation)
                     
                     timestep +=1
                     current_ep_reward += reward
@@ -269,9 +286,16 @@ def runner():
                 distance_covered = 0
 
             print("Terminating the run.")
-            # sys.exit()
-    except Exception as e:
-        raise e
+            sys.exit()
+
+    finally:
+        sys.exit()
+
 
 if __name__ == "__main__":
-    runner()
+    # try:        
+        runner()
+    # except KeyboardInterrupt:
+    #     sys.exit()
+    # finally:
+    #     print('\nExit')

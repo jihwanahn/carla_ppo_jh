@@ -5,7 +5,6 @@ import pygame
 from simulation.connection import carla
 from simulation.sensors import CameraSensor, CameraSensorEnv, CollisionSensor
 from simulation.settings import *
-import torch
 
 
 class CarlaEnvironment():
@@ -29,7 +28,6 @@ class CarlaEnvironment():
         self.route_waypoints = None
         self.town = town
         
-        
         # Objects to be kept alive
         self.camera_obj = None
         self.env_camera_obj = None
@@ -40,10 +38,8 @@ class CarlaEnvironment():
         self.sensor_list = list()
         self.actor_list = list()
         self.walker_list = list()
-        self.walker_controller_list = list()
+        self.create_pedestrians()
 
-        # comment below line if you don't want to spawn pedestrians
-        # self.create_pedestrians()
 
     def close(self):
         self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensor_list])
