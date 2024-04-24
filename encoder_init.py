@@ -1,7 +1,7 @@
 import sys
 import torch
 from autoencoder.encoder import VariationalEncoder
-from cnn.encoder import CNNEncoder
+from cnn.encoder import ResNetEncoder
 from transformer.encoder import TransformerEncoder
 import numpy as np
 
@@ -20,14 +20,15 @@ class EncodeState():
                 # for params in self.conv_encoder.parameters():
                 #     params.requires_grad = False
             elif self.run_name == "ppo_cnn":
-                pass
+                self.encoder = ResNetEncoder(self.latent_dim).to(self.device)
+                self.encoder.load()                
             elif self.run_name == "ppo_transformer":
                 pass
             
             self.encoder.eval()
             for params in self.encoder.parameters():
                     params.requires_grad = False
-        
+
         except:
             print('Encoder could not be initialized.')
 

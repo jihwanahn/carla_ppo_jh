@@ -45,6 +45,16 @@ class CarlaEnvironment():
         # comment below line if you don't want to spawn pedestrians
         # self.create_pedestrians()
 
+    def close(self):
+        self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensor_list])
+        self.client.apply_batch([carla.command.DestroyActor(x) for x in self.actor_list])
+        self.client.apply_batch([carla.command.DestroyActor(x) for x in self.walker_list])
+        self.sensor_list.clear()
+        self.actor_list.clear()
+        self.remove_sensors()
+        if self.display_on:
+            pygame.quit()
+
 
     # A reset function for reseting our environment.
     def reset(self):
@@ -151,14 +161,7 @@ class CarlaEnvironment():
             return [self.image_obs, self.navigation_obs]
 
         except:
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensor_list])
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.actor_list])
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.walker_list])
-            self.sensor_list.clear()
-            self.actor_list.clear()
-            self.remove_sensors()
-            if self.display_on:
-                pygame.quit()
+            self.close()
 
 
 # ----------------------------------------------------------------
@@ -234,7 +237,7 @@ class CarlaEnvironment():
             wp_fwd = self.vector(self.current_waypoint.transform.rotation.get_forward_vector())
             self.angle  = self.angle_diff(fwd, wp_fwd)
 
-             # Update checkpoint for training
+            # Update checkpoint for training
             if not self.fresh_start:
                 if self.checkpoint_frequency is not None:
                     self.checkpoint_waypoint_index = (self.current_waypoint_index // self.checkpoint_frequency) * self.checkpoint_frequency
@@ -310,14 +313,7 @@ class CarlaEnvironment():
             return [self.image_obs, self.navigation_obs], reward, done, [self.distance_covered, self.center_lane_deviation]
 
         except:
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensor_list])
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.actor_list])
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.walker_list])
-            self.sensor_list.clear()
-            self.actor_list.clear()
-            self.remove_sensors()
-            if self.display_on:
-                pygame.quit()
+            self.close()
 
 
 
