@@ -12,12 +12,13 @@ from encoder import ResNetEncoder
 from decoder import SimpleDecoder
 from datetime import datetime
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
+from pytorch_msssim import ssim, MS_SSIM
 
 # Hyper-parameters
-NUM_EPOCHS = 100
+NUM_EPOCHS = 50
 BATCH_SIZE = 128#32
 LEARNING_RATE = 1e-3#1e-4
-LATENT_SPACE = 512  # ResNet18의 fc layer 차원에 맞추어 조정
+LATENT_SPACE = 95  # ResNet18의 fc layer 차원에 맞추어 조정
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -45,14 +46,18 @@ class ResNetAutoencoder(nn.Module):
         self.encoder.load()
         self.decoder.load()
 
+def ssim_loss(x, x_hat):
+    return 1 - ssim(x, x_hat, data_range=1.0, size_average=True)
+
 def train(model, trainloader, optimizer, criterion):
     model.train()
     train_loss = 0.0
     for (x, _) in trainloader:
         x = x.to(device)
         x_hat = model(x)
-        # loss = F.mse_loss(x_hat, x, reduction='sum')
-        loss = criterion(x_hat, x)
+        loss = ssim_loss(x, x_hat)
+        # loss = F.mse_loss(x_hat, x, reduction='mean')
+        # loss = criterion(x_hat, x)
         optimizer.zero_grad()
 
         loss.backward()
@@ -64,16 +69,23 @@ def train(model, trainloader, optimizer, criterion):
 def test(model, testloader, criterion):
     model.eval()
     val_loss = 0.0
+
+    # test
+    # min_val, max_val = float('inf'), -float('inf')
+
     with torch.no_grad():
         for x, _ in testloader:
             x = x.to(device)
             # encoded_data = model.encoder(x)
             x_hat = model(x)
-            # loss = F.mse_loss(x_hat, x, reduction='sum')
-            loss = criterion(x_hat, x)
+            # min_val = min(min_val, x_hat.min().item())
+            # max_val = max(max_val, x_hat.max().item())
+            loss = ssim_loss(x, x_hat)
+            # loss = F.mse_loss(x_hat, x, reduction='mean')
+            # loss = criterion(x_hat, x)
 
             val_loss += loss.item() * x.size(0)
-
+    # print(f"Output range: {min_val} ~ {max_val}")
     return val_loss / len(testloader.dataset)
 
 def main():
@@ -82,16 +94,16 @@ def main():
 
     train_transforms = transforms.Compose([
         transforms.Resize((224, 224)),
-        transforms.RandomRotation(30),
+        # transforms.RandomRotation(30),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
     
     test_transforms = transforms.Compose([
         transforms.Resize((224, 224)),  # 이미지 크기 조정 추가
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
     
     train_data = datasets.ImageFolder(data_dir + 'train', transform=train_transforms)

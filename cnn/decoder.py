@@ -9,18 +9,26 @@ class SimpleDecoder(nn.Module):
         super().__init__()
         self.model_file = os.path.join('cnn/model', 'simple_decoder.pth')
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dims, 256 * 7 * 7),  # Adjust to match an intermediate size
-            nn.ReLU(),
-            nn.Unflatten(1, (256, 7, 7)),  # Correct dimensions to start unflattening
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),  # Resulting in 14x14
-            nn.ReLU(),
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  # Resulting in 28x28
-            nn.ReLU(),
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),  # Resulting in 56x56
-            nn.ReLU(),
-            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1),  # Resulting in 112x112
-            nn.ReLU(),
-            nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1),  # Final size should be 224x224
+            nn.Linear(latent_dims, 256 * 7 * 7),
+            nn.LeakyReLU(),
+            nn.Unflatten(1, (256, 7, 7)),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(128),  # 배치 정규화 추가
+            nn.LeakyReLU(),
+            nn.Dropout(0.5),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64),  # 배치 정규화 추가
+            nn.LeakyReLU(),
+            nn.Dropout(0.5),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(32),  # 배치 정규화 추가
+            nn.LeakyReLU(),
+            nn.Dropout(0.5),
+            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(16),  # 배치 정규화 추가
+            nn.LeakyReLU(),
+            nn.Dropout(0.5),
+            nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1, output_padding=(0,0)),
             nn.Sigmoid()
         )
 
