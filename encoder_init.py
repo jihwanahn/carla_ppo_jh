@@ -2,7 +2,7 @@ import sys
 import torch
 from autoencoder.encoder import VariationalEncoder
 from cnn.encoder import CNNEncoder
-from transformer.encoder import TransformerEncoder
+from vit.encoder import VitEncoder
 import numpy as np
 
 class EncodeState():
@@ -22,8 +22,8 @@ class EncodeState():
             elif self.run_name == "cnn":
                 self.encoder = CNNEncoder(self.latent_dim).to(self.device)
                 self.encoder.load()
-            elif self.run_name == "transformer":
-                self.encoder = TransformerEncoder(self.latent_dim).to(self.device)
+            elif self.run_name == "vit":
+                self.encoder = VitEncoder(self.latent_dim).to(self.device)
                 self.encoder.load()
                 
             
