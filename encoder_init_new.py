@@ -2,7 +2,7 @@ import sys
 import torch
 from autoencoder.encoder import VariationalEncoder
 from cnn.encoder import CNNEncoder
-from vit.encoder import VitEncoder
+from vit.encoder import ViTEncoder
 
 #run_name
 class EncodeState():
@@ -11,14 +11,14 @@ class EncodeState():
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         try:
-            if run_name == "PPO":
+            if run_name == "VAE":
                 self.conv_encoder = VariationalEncoder(self.latent_dim).to(self.device)
                 self.conv_encoder.load()
             elif run_name == "CNN":
                 self.conv_encoder = CNNEncoder(self.latent_dim).to(self.device)
                 self.conv_encoder.load()
             elif run_name == "VIT":
-                self.conv_encoder = VitEncoder(self.latent_dim).to(self.device)
+                self.conv_encoder = ViTEncoder(self.latent_dim).to(self.device)
                 print('Transformer encoder not implemented yet.')
                 pass
             elif run_name == "DEIT":

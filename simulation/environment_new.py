@@ -157,6 +157,8 @@ class CarlaEnvironment():
             return [self.image_obs, self.navigation_obs]
 
         except:
+            print("An error occured while resetting the environment.")
+
             self.close()
 
 

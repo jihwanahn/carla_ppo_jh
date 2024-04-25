@@ -59,8 +59,8 @@ def runner():
     action_std_init = args.action_std_init
 
     try:
-        if exp_name == 'ppo':
-            run_name = "PPO"
+        if exp_name == 'vae':
+            run_name = "VAE"
         elif exp_name == 'cnn':
             run_name = "CNN"
         elif exp_name == 'vit':
@@ -131,24 +131,24 @@ def runner():
         time.sleep(0.5)
         
         if checkpoint_load:
-            chkt_file_nums = len(next(os.walk(f'checkpoints/PPO/{town}'))[2]) - 1
-            chkpt_file = f'checkpoints/PPO/{town}/checkpoint_ppo_'+str(chkt_file_nums)+'.pickle'
+            chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{town}'))[2]) - 1
+            chkpt_file = f'checkpoints/{run_name}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
             with open(chkpt_file, 'rb') as f:
                 data = pickle.load(f)
                 episode = data['episode']
                 timestep = data['timestep']
                 cumulative_score = data['cumulative_score']
                 action_std_init = data['action_std_init']
-            agent = PPOAgent(town, action_std_init)
+            agent = PPOAgent(town, run_name, action_std_init)
             agent.load()
         else:
             if train == False:
-                agent = PPOAgent(town, action_std_init)
+                agent = PPOAgent(town, run_name, action_std_init)
                 agent.load()
                 for params in agent.old_policy.actor.parameters():
                     params.requires_grad = False
             else:
-                agent = PPOAgent(town, action_std_init)
+                agent = PPOAgent(town, run_name, action_std_init)
         if train:
             #Training
             while timestep < total_timesteps:
@@ -206,10 +206,10 @@ def runner():
                 if episode % 10 == 0:
                     agent.learn()
                     agent.chkpt_save()
-                    chkt_file_nums = len(next(os.walk(f'checkpoints/PPO/{town}'))[2])
+                    chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{town}'))[2])
                     if chkt_file_nums != 0:
                         chkt_file_nums -=1
-                    chkpt_file = f'checkpoints/PPO/{town}/checkpoint_ppo_'+str(chkt_file_nums)+'.pickle'
+                    chkpt_file = f'checkpoints/{run_name}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
                     data_obj = {'cumulative_score': cumulative_score, 'episode': episode, 'timestep': timestep, 'action_std_init': action_std_init}
                     with open(chkpt_file, 'wb') as handle:
                         pickle.dump(data_obj, handle)
@@ -236,8 +236,8 @@ def runner():
                 if episode % 100 == 0:
                     
                     agent.save()
-                    chkt_file_nums = len(next(os.walk(f'checkpoints/PPO/{town}'))[2])
-                    chkpt_file = f'checkpoints/PPO/{town}/checkpoint_ppo_'+str(chkt_file_nums)+'.pickle'
+                    chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{town}'))[2])
+                    chkpt_file = f'checkpoints/{run_name}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
                     data_obj = {'cumulative_score': cumulative_score, 'episode': episode, 'timestep': timestep, 'action_std_init': action_std_init}
                     with open(chkpt_file, 'wb') as handle:
                         pickle.dump(data_obj, handle)
@@ -294,16 +294,15 @@ def runner():
                 distance_covered = 0
 
             print("Terminating the run.")
-            sys.exit()
-
-    finally:
-        sys.exit()
+            # sys.exit()
+    except Exception as e:
+        raise e
 
 
 if __name__ == "__main__":
-    try:        
-        runner()
-    except KeyboardInterrupt:
-        sys.exit()
-    finally:
-        print('\nExit')
+    # try:        
+    runner()
+    # except KeyboardInterrupt:
+    #     sys.exit()
+    # finally:
+    #     print('\nExit')

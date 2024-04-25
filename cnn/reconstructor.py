@@ -63,7 +63,7 @@ def main():
 
     test_data = datasets.ImageFolder(data_dir+'test', transform=test_transforms)
 
-    testloader = torch.utils.data.DataLoader(test_data, batch_size=BATCH_SIZE)
+    testloader = DataLoader(test_data, batch_size=BATCH_SIZE)
 
     model = CNNEncoder(latent_dims=LATENT_SPACE).to(device)
     model.load()

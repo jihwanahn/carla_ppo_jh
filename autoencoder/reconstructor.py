@@ -65,10 +65,10 @@ def main():
             x_hat = model(x)
             x_hat = x_hat.cpu()
             x_hat = x_hat.squeeze(0)
-            transform = transforms.ToPILImage()
+            
 
             # convert the tensor to PIL image using above transform
-            img = transform(x_hat)
+            img = transforms.ToPILImage()(x_hat)
 
             image_filename = str(count) +'.png'
             img.save('autoencoder/reconstructed/'+image_filename)
