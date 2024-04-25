@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 # Hyper-parameters
 NUM_EPOCHS = 50
-BATCH_SIZE = 128#32
+BATCH_SIZE = 64#32
 LEARNING_RATE = 1e-3#1e-4
 LATENT_SPACE = 95  # ResNet18의 fc layer 차원에 맞추어 조정
 
