@@ -141,19 +141,19 @@ class PPOAgent(object):
     
     def save(self):
         self.checkpoint_file_no = len(next(os.walk(PPO_CHECKPOINT_DIR+self.town))[2])
-        checkpoint_file = f'{PPO_CHECKPOINT_DIR}+{self.town}+"/{self.run_name}_policy_" + str({self.checkpoint_file_no})+"_.pth"'
+        checkpoint_file = f'{PPO_CHECKPOINT_DIR}/{self.town}/{self.run_name}_policy_{self.checkpoint_file_no}_.pth'
         torch.save(self.old_policy.state_dict(), checkpoint_file)
 
     def chkpt_save(self):
         self.checkpoint_file_no = len(next(os.walk(PPO_CHECKPOINT_DIR+self.town))[2])
         if self.checkpoint_file_no !=0:
             self.checkpoint_file_no -=1
-        checkpoint_file = f'{PPO_CHECKPOINT_DIR}+{self.town}+"/{self.run_name}_policy_" + str({self.checkpoint_file_no})+"_.pth"'
+        checkpoint_file = f'{PPO_CHECKPOINT_DIR}/{self.town}/{self.run_name}_policy_{self.checkpoint_file_no}_.pth'
         torch.save(self.old_policy.state_dict(), checkpoint_file)
     
     def load(self):
         self.checkpoint_file_no = len(next(os.walk(PPO_CHECKPOINT_DIR+self.town))[2]) - 1
-        checkpoint_file = f'{PPO_CHECKPOINT_DIR}+{self.town}+"/{self.run_name}_policy_" + str({self.checkpoint_file_no})+"_.pth"'
+        checkpoint_file = f'{PPO_CHECKPOINT_DIR}/{self.town}/{self.run_name}_policy_{self.checkpoint_file_no}_.pth'
         self.old_policy.load_state_dict(torch.load(checkpoint_file))
         self.policy.load_state_dict(torch.load(checkpoint_file))
 
