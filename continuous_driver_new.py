@@ -63,8 +63,11 @@ def runner():
             run_name = "PPO"
         elif exp_name == 'cnn':
             run_name = "CNN"
-        elif exp_name == 'transformer':
-            run_name = "Transformer"
+        elif exp_name == 'vit':
+            run_name = "VIT"
+        elif exp_name == 'deit':
+            run_name = "DEIT"
+            print('DEIT not implemented yet.')
         else:
             raise ValueError("Invalid experiment name.")
             """

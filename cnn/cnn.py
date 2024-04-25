@@ -112,7 +112,7 @@ def test(model, testloader, criterion, perceptual_criterion):
 
 def main():
     data_dir = 'autoencoder/dataset/'
-    writer = SummaryWriter(f"runs/ResNet-auto-encoder/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+    writer = SummaryWriter(f"runs/cnn/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
 
     train_transforms = transforms.Compose([
         transforms.Resize((224, 224)),

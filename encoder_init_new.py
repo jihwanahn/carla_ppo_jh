@@ -2,7 +2,7 @@ import sys
 import torch
 from autoencoder.encoder import VariationalEncoder
 from cnn.encoder import CNNEncoder
-from transformer.encoder import TransformerEncoder
+from vit.encoder import VitEncoder
 
 #run_name
 class EncodeState():
@@ -17,8 +17,12 @@ class EncodeState():
             elif run_name == "CNN":
                 self.conv_encoder = CNNEncoder(self.latent_dim).to(self.device)
                 self.conv_encoder.load()
-            elif run_name == "Transformer":
+            elif run_name == "VIT":
+                self.conv_encoder = VitEncoder(self.latent_dim).to(self.device)
                 print('Transformer encoder not implemented yet.')
+                pass
+            elif run_name == "DEIT":
+                print('DEIT encoder not implemented yet.')
                 pass
 
             self.conv_encoder.eval()
