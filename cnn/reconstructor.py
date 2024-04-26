@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils
 import torchvision.transforms as transforms
-from torchvision import datasets
+from torchvision import datasets, models
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 from encoder import CNNEncoder
@@ -34,9 +34,10 @@ def unnormalize(img):
     img = img.clamp(0, 1)
     return img
 
-class CNNEncoder(nn.Module):
+class CNNAutoencoder(nn.Module):
+
     def __init__(self, latent_dims):
-        super(CNNEncoder, self).__init__()
+        super(CNNAutoencoder, self).__init__()
         self.model_file = os.path.join('cnn/model', 'resnet_autoencoder.pth')
         self.encoder = CNNEncoder(latent_dims)
         self.decoder = CNNDecoder(latent_dims)
@@ -65,7 +66,7 @@ def main():
 
     testloader = DataLoader(test_data, batch_size=BATCH_SIZE)
 
-    model = CNNEncoder(latent_dims=LATENT_SPACE).to(device)
+    model = CNNAutoencoder(latent_dims=LATENT_SPACE).to(device)
     model.load()
 
     count = 1
