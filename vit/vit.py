@@ -11,8 +11,8 @@ from encoder import ViTEncoder
 from decoder import ViTDecoder
 
 # Hyper-parameters
-NUM_EPOCHS = 50
-BATCH_SIZE = 32
+NUM_EPOCHS = 1000
+BATCH_SIZE = 64
 LEARNING_RATE = 1e-4
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -46,7 +46,8 @@ class ViTAutoencoder(nn.Module):
                 loss = self.loss_function(recon_batch, data, mu, logvar)
                 loss.backward()
                 optimizer.step()
-            print(f'Epoch {epoch+1}, Loss: {loss.item()}')
+            writer.add_scalar("Training Loss/epoch", loss.item(), epoch+1)
+            print(f'Epoch {epoch+1}, Training Loss: {loss.item()}')            
 
             self.eval()
             with torch.no_grad():
@@ -58,6 +59,16 @@ class ViTAutoencoder(nn.Module):
                 val_loss /= len(valid_loader.dataset)
                 writer.add_scalar("Validation Loss/epoch", val_loss, epoch+1)
                 print(f'Epoch {epoch+1}, Validation Loss: {val_loss}')
+
+    def save(self):
+        torch.save(self.state_dict(), 'vit/model/vit_autoencoder.pth')
+        self.encoder.save()
+        self.decoder.save()
+
+    def load(self):
+        self.load_state_dict(torch.load('vit/model/vit_autoencoder.pth'))
+        self.encoder.load()
+        self.decoder.load()
 
 # Define the main function to run the VAE
 def main():
@@ -84,7 +95,9 @@ def main():
 
     model = ViTAutoencoder(input_dim, output_dim, latent_dims, nhead, num_layers, dropout).to(device)
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    model.train_model(train_loader, valid_loader, optimizer, 50)
+    model.train_model(train_loader, valid_loader, optimizer, NUM_EPOCHS)
+
+    model.save()
 
 if __name__ == '__main__':
     main()
