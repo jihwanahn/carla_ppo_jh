@@ -1,117 +1,90 @@
-import os
-import sys
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchvision.transforms as transforms
-from torchvision import datasets
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
+from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
-from encoder import ViTEncoder
-from decoder import ViTDecoder
 from datetime import datetime
 
+# Import the newly defined encoder and decoder
+from encoder import ViTEncoder
+from decoder import ViTDecoder
 
 # Hyper-parameters
 NUM_EPOCHS = 50
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
-LATENT_SPACE = 95
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-
-class VITAutoencoder(nn.Module):
-    def __init__(self, latent_dims):
-        super(VITAutoencoder, self).__init__()
-        self.model_file = os.path.join('vit/model', 'vit_autoencoder.pth')
-        self.encoder = ViTEncoder(latent_dims, image_size=(160, 80), patch_size=8)
-        self.decoder = ViTDecoder(latent_dims, image_size=(160, 80), patch_size=8)
+class ViTAutoencoder(nn.Module):
+    def __init__(self, input_dim, output_dim, latent_dims, nhead, num_layers, dropout=0.1):
+        super(ViTAutoencoder, self).__init__()
+        self.encoder = ViTEncoder(latent_dims, nhead, num_layers, dropout)
+        self.decoder = ViTDecoder(latent_dims, nhead, num_layers, dropout)
 
     def forward(self, x):
-        x = x.to(device)
-        z = self.encoder(x)
-        return self.decoder(z)
-    
-    def save(self):
-        torch.save(self.state_dict(), self.model_file)
-        self.encoder.save()
-        self.decoder.save()
-    
-    def load(self):
-        self.load_state_dict(torch.load(self.model_file))
-        self.encoder.load()
-        self.decoder.load()
+        mu, logvar = self.encoder(x)
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        z = mu + eps * std
+        return self.decoder(z), mu, logvar
 
-def train(model, trainloader, optim, criterion):
-    model.train()
-    train_loss = 0.0
-    for(x, _) in trainloader:
-        # Move tensor to the proper device
-        x = x.to(device)
-        optim.zero_grad()
-        
-        x_hat = model(x)
-        loss = criterion(x, x_hat)
-        
-        loss.backward()
-        optim.step()
+    def loss_function(self, recon_x, x, mu, logvar):
+        BCE = nn.functional.binary_cross_entropy(recon_x, x, reduction='sum')
+        KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        return BCE + KLD
 
-        train_loss+=loss.item() * x.size(0)
-    return train_loss / len(trainloader.dataset)
+    def train_model(self, train_loader, valid_loader, optimizer, epochs):
+        writer = SummaryWriter(f"runs/vit/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+        for epoch in range(epochs):
+            self.train()
+            for data, _ in train_loader:
+                data = data.to(device)
+                optimizer.zero_grad()
+                recon_batch, mu, logvar = self(data)
+                loss = self.loss_function(recon_batch, data, mu, logvar)
+                loss.backward()
+                optimizer.step()
+            print(f'Epoch {epoch+1}, Loss: {loss.item()}')
 
+            self.eval()
+            with torch.no_grad():
+                val_loss = 0
+                for data, _ in valid_loader:
+                    data = data.to(device)
+                    recon_batch, mu, logvar = self(data)
+                    val_loss += self.loss_function(recon_batch, data, mu, logvar).item()
+                val_loss /= len(valid_loader.dataset)
+                writer.add_scalar("Validation Loss/epoch", val_loss, epoch+1)
+                print(f'Epoch {epoch+1}, Validation Loss: {val_loss}')
 
-def test(model, testloader, criterion):
-    # Set evaluation mode for encoder and decoder
-    model.eval()
-    val_loss = 0.0
-    with torch.no_grad(): # No need to track the gradients
-        for x, _ in testloader:
-            # Move tensor to the proper device
-            x = x.to(device)
-            x_hat = model(x)
-            loss = criterion(x, x_hat)
-            val_loss += loss.item()
-
-    return val_loss / len(testloader.dataset)
-
-
+# Define the main function to run the VAE
 def main():
-
     data_dir = 'autoencoder/dataset/'
-
-    writer = SummaryWriter(f"runs/vit/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
-    
-    # Applying Transformation
-    train_transforms = transforms.Compose([transforms.RandomRotation(30),transforms.RandomHorizontalFlip(),transforms.ToTensor()])
+    train_transforms = transforms.Compose([transforms.RandomRotation(30), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
     test_transforms = transforms.Compose([transforms.ToTensor()])
 
     train_data = datasets.ImageFolder(data_dir+'train', transform=train_transforms)
     test_data = datasets.ImageFolder(data_dir+'test', transform=test_transforms)
     
-    m=len(train_data)
-    train_data, val_data = random_split(train_data, [int(m-m*0.2), int(m*0.2)])
+    m = len(train_data)
+    train_data, val_data = random_split(train_data, [int(m - 0.2 * m), int(0.2 * m)])
     
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
+    valid_loader = torch.utils.data.DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
-    # Data Loading
-    trainloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
-    validloader = torch.utils.data.DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
-        
-    model = VITAutoencoder(latent_dims=LATENT_SPACE).to(device)
-    optim = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    criterion = nn.MSELoss()
-    print(f'Selected device :) :) :) {device}')
+    # Model setup
+    input_dim = (3, 160, 80)
+    output_dim = (3, 160, 80)
+    latent_dims = 50
+    nhead = 8
+    num_layers = 3
+    dropout = 0.1
 
-    for epoch in range(NUM_EPOCHS):
-        train_loss = train(model,trainloader, optim, criterion)
-        writer.add_scalar("Training Loss/epoch", train_loss, epoch+1)
-        val_loss = test(model,validloader)
-        writer.add_scalar("Validation Loss/epoch", val_loss, epoch+1)
-        print('\nEPOCH {}/{} \t train loss {:.3f} \t val loss {:.3f}'.format(epoch + 1, NUM_EPOCHS,train_loss,val_loss))
-    
-    model.save()
+    model = ViTAutoencoder(input_dim, output_dim, latent_dims, nhead, num_layers, dropout).to(device)
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    model.train_model(train_loader, valid_loader, optimizer, 50)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

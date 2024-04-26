@@ -1,57 +1,57 @@
 import os
-import sys
-import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.utils
-import torchvision.transforms as transforms
-from torchvision import datasets
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, random_split
-from vit.vit import VITAutoencoder
-from PIL import Image
+from torchvision import transforms, datasets
+from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
+from torchvision.utils import save_image
 
-# Hyper-parameters
-BATCH_SIZE = 1
-LATENT_SPACE = 95
+from vit.vit import ViTAutoencoder
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+def reconstruct_images(model, data_loader, output_dir ,num_images=6):
+    model.eval()
+    os.makedirs(output_dir, exist_ok=True)
+    with torch.no_grad():
+        for i, (data, _) in enumerate(data_loader):
+            if i >= num_images:
+                break
+            data = data.to(device)
+            reconstructed, _, _ = model(data)
+
+            # Save original and reconstructed images
+            for j in range(data.size(0)):
+                save_image(data[j], os.path.join(output_dir, f'original_{i * data_loader.batch_size + j}.png'))
+                save_image(reconstructed[j], os.path.join(output_dir, f'reconstructed_{i * data_loader.batch_size + j}.png'))
+
 
 def main():
-    data_dir = 'autoencoder/dataset/'
+    # Load dataset
+    transform = transforms.Compose([
+        transforms.Resize((160, 80)),  # Resize images to match input dimensions expected by the model
+        transforms.ToTensor()
+    ])
+    dataset = datasets.ImageFolder('autoencoder/dataset/test', transform=transform)
+    data_loader = DataLoader(dataset, batch_size=6, shuffle=True)
 
-    test_transforms = transforms.Compose([transforms.ToTensor()])
+    # Initialize VAE Model
+    input_dim = (3, 160, 80)  # Adjust based on your actual input dimensions
+    output_dim = (3, 160, 80)
+    latent_dims = 50
+    nhead = 8
+    num_layers = 3
+    dropout = 0.1
 
-    test_data = datasets.ImageFolder(data_dir+'test', transform=test_transforms)
+    model = ViTAutoencoder(input_dim, output_dim, latent_dims, nhead, num_layers, dropout).to(device)
 
-    test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
+    # Load model weights if available
+    try:
+        model.load_state_dict(torch.load('vae/model/vae_autoencoder.pth'))
+    except FileNotFoundError:
+        print("Model weights not found, ensure the model is trained and weights are saved.")
 
-    model = VITAutoencoder(LATENT_SPACE).to(device)
-
-    model.load()
-    count = 1
-
-    with torch.no_grad():
-        for x, _ in test_loader:
-            x = x.to(device)
-            x_hat = model(x)
-            x = x.cpu()
-            x_hat = x_hat.cpu()
-            x_hat = x_hat.squeeze(0)
-
-            img = transforms.ToPILImage()(x_hat)
-
-            image_filename = str(count) + '.png'
-            img.save('vit/reconstructed/' + image_filename)
-
-            count += 1
+    output_dir = 'vit/reconstructed/'
+    reconstruct_images(model, data_loader, output_dir)
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        sys.exit()
-    finally:
-        sys.exit()
+    main()

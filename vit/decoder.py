@@ -1,39 +1,31 @@
 import os
 import torch
 import torch.nn as nn
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ViTDecoder(nn.Module):
-    def __init__(self, latent_dims, image_size=(160, 80), patch_size=8):
+    def __init__(self, latent_dims, nhead, num_decoder_layers, dropout=0.1):
         super().__init__()
-        self.model_file = os.path.join('vit/model', 'vit_decoder_model.pth')
+        self.model_file = os.path.join('vit/model', 'decoder_model.pth')
         
-        # Assuming the latent space dimension is 512 as specified in the encoder
-        latent_space_dimension = 512
+        self.fc = nn.Linear(latent_dims, 512)
+        output_features = 160 * 80 * 3
+
+        decoder_layers = TransformerEncoderLayer(d_model=512, nhead=nhead, dropout=dropout)
+        self.transformer_decoder = TransformerEncoder(decoder_layers, num_layers=num_decoder_layers)
         
-        # Define the layers of the decoder
-        self.decoder = nn.Sequential(
-            # First linear layer to upsample from the encoded latent dimension
-            nn.Linear(latent_space_dimension, 512 * (image_size[0] // patch_size) * (image_size[1] // patch_size)),
-            nn.ReLU(),
-            
-            # Reshape into a set of feature maps
-            nn.Unflatten(dim=1, unflattened_size=(512, image_size[0] // patch_size, image_size[1] // patch_size)),
-            
-            # Series of transposed convolutions to upscale the feature maps to the original image size
-            nn.ConvTranspose2d(512, 256, kernel_size=3, stride=2, padding=1, output_padding=1),
-            nn.ReLU(),
-            nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, padding=1, output_padding=1),
-            nn.ReLU(),
-            nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
-            nn.ReLU(),
-            
-            # Final layer to produce the output image with 3 channels (RGB)
-            nn.ConvTranspose2d(64, 3, kernel_size=3, stride=2, padding=1, output_padding=1),
-            nn.Sigmoid()  # Sigmoid to ensure pixel values are between 0 and 1
-        )
+        self.output_projection = nn.Linear(512, output_features)
+        self.final_shape = (3, 80 , 160)
 
     def forward(self, x):
-        x = self.decoder(x)
+        x = self.fc(x)
+        x = self.transformer_decoder(x.unsqueeze(0))
+        x = x.squeeze(0)
+        x = self.output_projection(x)
+        x = torch.sigmoid(x)
+        x = x.view(-1, *self.final_shape)  # Reshape to the desired output dimensions
         return x
 
     def save(self):
