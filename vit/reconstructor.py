@@ -5,11 +5,11 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from torchvision.utils import save_image
 
-from vit.vit import ViTAutoencoder
+from vit import ViTAutoencoder
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def reconstruct_images(model, data_loader, output_dir ,num_images=6):
+def reconstruct_images(model, data_loader, output_dir ,num_images=2000):
     model.eval()
     os.makedirs(output_dir, exist_ok=True)
     with torch.no_grad():
@@ -28,10 +28,10 @@ def reconstruct_images(model, data_loader, output_dir ,num_images=6):
 def main():
     # Load dataset
     transform = transforms.Compose([
-        transforms.Resize((160, 80)),  # Resize images to match input dimensions expected by the model
+        # transforms.Resize((160, 80)),  # Resize images to match input dimensions expected by the model
         transforms.ToTensor()
     ])
-    dataset = datasets.ImageFolder('autoencoder/dataset/test', transform=transform)
+    dataset = datasets.ImageFolder('vit/dataset/test', transform=transform)
     data_loader = DataLoader(dataset, batch_size=6, shuffle=True)
 
     # Initialize VAE Model
@@ -43,10 +43,10 @@ def main():
     dropout = 0.1
 
     model = ViTAutoencoder(input_dim, output_dim, latent_dims, nhead, num_layers, dropout).to(device)
-
+    model_file = os.path.join('vit/model', 'vit_autoencoder.pth')
     # Load model weights if available
     try:
-        model.load_state_dict(torch.load('vae/model/vae_autoencoder.pth'))
+        model.load_state_dict(torch.load('vit/model/vit_autoencoder.pth'))
     except FileNotFoundError:
         print("Model weights not found, ensure the model is trained and weights are saved.")
 

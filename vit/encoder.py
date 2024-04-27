@@ -9,7 +9,7 @@ class ViTEncoder(nn.Module):
     def __init__(self, latent_dims, nhead, num_encoder_layers, dropout=0.1):
         super(ViTEncoder, self).__init__()
         self.latent_dims = latent_dims
-        self.model_file = os.path.join('vit/model', 'var_encoder_model.pth')
+        self.model_file = os.path.join('vit/model', 'vit_encoder_model.pth')
         
         input_features = 160 * 80 * 3
 

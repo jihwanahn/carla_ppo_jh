@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,7 +13,7 @@ from decoder import ViTDecoder
 
 # Hyper-parameters
 NUM_EPOCHS = 1000
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 LEARNING_RATE = 1e-4
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -72,7 +73,7 @@ class ViTAutoencoder(nn.Module):
 
 # Define the main function to run the VAE
 def main():
-    data_dir = 'autoencoder/dataset/'
+    data_dir = 'vit/dataset/'
     train_transforms = transforms.Compose([transforms.RandomRotation(30), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
     test_transforms = transforms.Compose([transforms.ToTensor()])
 

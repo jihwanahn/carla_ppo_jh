@@ -14,18 +14,21 @@ class EncodeState():
             if run_name == "VAE":
                 self.conv_encoder = VariationalEncoder(self.latent_dim).to(self.device)
                 self.conv_encoder.load()
+                self.conv_encoder.eval()
+
             elif run_name == "CNN":
                 self.conv_encoder = CNNEncoder(self.latent_dim).to(self.device)
                 self.conv_encoder.load()
+                self.conv_encoder.eval()
+
             elif run_name == "VIT":
-                self.conv_encoder = ViTEncoder(self.latent_dim).to(self.device)
-                print('Transformer encoder not implemented yet.')
-                pass
-            elif run_name == "DEIT":
-                print('DEIT encoder not implemented yet.')
+                self.conv_encoder = ViTEncoder(self.latent_dim, nhead=8, num_encoder_layers=3, dropout=0.1).to(self.device)
+                self.conv_encoder.load()
+                self.conv_encoder.eval()
+            
+            else:
                 pass
 
-            self.conv_encoder.eval()
 
             for params in self.conv_encoder.parameters():
                 params.requires_grad = False
