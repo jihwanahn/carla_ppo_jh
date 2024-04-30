@@ -121,7 +121,8 @@ def runner():
         env = CarlaEnvironment(client, world,town)
     else:
         env = CarlaEnvironment(client, world,town, checkpoint_frequency=None)
-    encode = EncodeState(LATENT_DIM, run_name)
+    LATENT_DIM_TEST = 50
+    encode = EncodeState(LATENT_DIM_TEST, run_name)
 
 
     #========================================================================

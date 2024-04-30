@@ -32,9 +32,9 @@ class EncodeState():
 
             for params in self.conv_encoder.parameters():
                 params.requires_grad = False
-        except:
+        except Exception as e:
             print('Encoder could not be initialized.')
-            sys.exit()
+            raise e
     
     def process(self, observation):
         image_obs = torch.tensor(observation[0], dtype=torch.float).to(self.device)

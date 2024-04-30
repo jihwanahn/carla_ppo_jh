@@ -17,7 +17,7 @@ from torchvision.models import vgg16
 from tqdm import tqdm
 
 # Hyper-parameters
-NUM_EPOCHS = 50
+NUM_EPOCHS = 500#1000
 BATCH_SIZE = 64#32
 LEARNING_RATE = 1e-3#1e-4
 LATENT_SPACE = 95  # ResNet18의 fc layer 차원에 맞추어 조정
@@ -72,10 +72,10 @@ def train(model, trainloader, optimizer, criterion, perceptual_criterion):
         x = x.to(device)
         x_hat = model(x)
         ssim_loss_val = ssim_loss(x, x_hat)
-        perceptual_loss = perceptual_criterion(x_hat, x)
-        loss = ssim_loss_val + perceptual_loss
+        # perceptual_loss = perceptual_criterion(x_hat, x)
+        # loss = ssim_loss_val + perceptual_loss
         # loss = ssim_loss(x, x_hat)
-        # loss = F.mse_loss(x_hat, x, reduction='mean')
+        loss = F.mse_loss(x_hat, x, reduction='mean')
         # loss = criterion(x_hat, x)
         optimizer.zero_grad()
 
@@ -100,10 +100,10 @@ def test(model, testloader, criterion, perceptual_criterion):
             # min_val = min(min_val, x_hat.min().item())
             # max_val = max(max_val, x_hat.max().item())
             ssim_loss_val = ssim_loss(x, x_hat)
-            perceptual_loss = perceptual_criterion(x_hat, x)
-            loss = ssim_loss_val + perceptual_loss
+            # perceptual_loss = perceptual_criterion(x_hat, x)
+            # loss = ssim_loss_val + perceptual_loss
             # loss = ssim_loss(x, x_hat)
-            # loss = F.mse_loss(x_hat, x, reduction='mean')
+            loss = F.mse_loss(x_hat, x, reduction='mean')
             # loss = criterion(x_hat, x)
 
             val_loss += loss.item() * x.size(0)
@@ -112,6 +112,7 @@ def test(model, testloader, criterion, perceptual_criterion):
 
 def main():
     data_dir = 'autoencoder/dataset/'
+    data_dir2 = 'vit/dataset/'
     writer = SummaryWriter(f"runs/cnn/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
 
     train_transforms = transforms.Compose([
@@ -128,8 +129,8 @@ def main():
         # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
     
-    train_data = datasets.ImageFolder(data_dir + 'train', transform=train_transforms)
-    test_data = datasets.ImageFolder(data_dir + 'test', transform=test_transforms)
+    train_data = datasets.ImageFolder(data_dir2 + 'train', transform=train_transforms)
+    test_data = datasets.ImageFolder(data_dir2 + 'test', transform=test_transforms)
 
     m = len(train_data)
     train_data, val_data = random_split(train_data, [int(m - m * 0.2), int(m * 0.2)])
