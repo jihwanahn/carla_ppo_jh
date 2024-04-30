@@ -55,25 +55,20 @@ class PPOAgent(object):
 
     def get_action(self, obs, train):
         with torch.no_grad():
-            if isinstance(obs, list):
-                obs_tensors = [torch.tensor(o, dtype=torch.float, device=device) for o in obs]
-            elif isinstance(obs, np.ndarray):
-                obs_tensors = [torch.tensor(obs, dtype=torch.float, device=device)]
-            else:
-                obs_tensors = [obs.to(device)] # AttributeError: 'NoneType' object has no attribute 'to' 발생
-
-            actions, logprobs = [], []
-            for obs in obs_tensors:
-                action, logprob = self.old_policy.get_action_and_log_prob(obs)
-                actions.append(action)
-                logprobs.append(logprob)
-
+            if isinstance(obs, np.ndarray):
+                obs = torch.tensor(obs, dtype=torch.float)
+                print("Converted observation shape:", obs.shape)
+            obs = obs.to(device)
+            print("Observation shape on device:", obs.shape)
+            action, logprob = self.old_policy.get_action_and_log_prob(obs)
+            print("Action shape:", action.shape)  # 얻어진 행동의 형태 출력
+            print("Logprob shape:", logprob.shape)  # 로그 확률의 형태 출력
         if train:
-            self.memory.observation.extend(obs_tensors)
-            self.memory.actions.extend(actions)
-            self.memory.log_probs.extend(logprobs)
+            self.memory.observation.append(obs.to(device))
+            self.memory.actions.append(action)
+            self.memory.log_probs.append(logprob)
 
-        return torch.stack(actions).detach().cpu().numpy().flatten()
+        return action.detach().cpu().numpy().flatten()
     
     def set_action_std(self, new_action_std):
         self.action_std = new_action_std

@@ -25,12 +25,22 @@ class ViTAutoencoder(nn.Module):
         self.decoder = ViTDecoder(latent_dims, nhead, num_layers, dropout)
 
     def forward(self, x):
-        mu, logvar = self.encoder(x)
+        combined = self.encoder(x)
+        # 가정: `combined` 텐서는 첫 번째 절반은 `mu`, 두 번째 절반은 `logvar`
+        mid_point = combined.size(1) // 2
+        mu = combined[:, :mid_point]
+        logvar = combined[:, mid_point:]
+
+        # 나머지 모델 계산을 계속 진행
+        z = self.reparameterize(mu, logvar)
+        recon_x = self.decoder(z)
+        return recon_x, mu, logvar
+
+    def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
-        z = mu + eps * std
-        return self.decoder(z), mu, logvar
-
+        return mu + eps * std
+    
     def loss_function(self, recon_x, x, mu, logvar):
         BCE = nn.functional.binary_cross_entropy(recon_x, x, reduction='sum')
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
@@ -73,7 +83,8 @@ class ViTAutoencoder(nn.Module):
 
 # Define the main function to run the VAE
 def main():
-    data_dir = 'vit/dataset/'
+    data_dir = 'autoencoder/dataset/'
+    data_dir2 = 'vit/dataset/'
     train_transforms = transforms.Compose([transforms.RandomRotation(30), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
     test_transforms = transforms.Compose([transforms.ToTensor()])
 
@@ -89,7 +100,7 @@ def main():
     # Model setup
     input_dim = (3, 160, 80)
     output_dim = (3, 160, 80)
-    latent_dims = 50
+    latent_dims = 95
     nhead = 8
     num_layers = 3
     dropout = 0.1

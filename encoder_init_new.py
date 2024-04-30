@@ -9,19 +9,20 @@ class EncodeState():
     def __init__(self, latent_dim, run_name):
         self.latent_dim = latent_dim
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
+        self.run_name = run_name
+
         try:
-            if run_name == "VAE":
+            if self.run_name == "VAE":
                 self.conv_encoder = VariationalEncoder(self.latent_dim).to(self.device)
                 self.conv_encoder.load()
                 self.conv_encoder.eval()
 
-            elif run_name == "CNN":
+            elif self.run_name == "CNN":
                 self.conv_encoder = CNNEncoder(self.latent_dim).to(self.device)
                 self.conv_encoder.load()
                 self.conv_encoder.eval()
 
-            elif run_name == "VIT":
+            elif self.run_name == "VIT":
                 self.conv_encoder = ViTEncoder(self.latent_dim, nhead=8, num_encoder_layers=3, dropout=0.1).to(self.device)
                 self.conv_encoder.load()
                 self.conv_encoder.eval()

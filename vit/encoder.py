@@ -29,7 +29,13 @@ class ViTEncoder(nn.Module):
         x = x.squeeze(0)
         mu = self.fc_mu(x)
         logvar = self.fc_logvar(x)
-        return mu, logvar
+
+        combined = torch.cat((mu, logvar), dim=-1)
+        # print("Size of mu:", mu.size())
+        # print("Size of logvar:", logvar.size())
+        # print("Combined size:", combined.size())
+
+        return combined
 
     def save(self):
         torch.save(self.state_dict(), self.model_file)
