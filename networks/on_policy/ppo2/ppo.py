@@ -8,7 +8,7 @@ class ActorCritic(nn.Module):
     def __init__(self, channels, height, width, action_dim, action_std_init):
         super(ActorCritic, self).__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
+        device = torch.device("cpu")    
         self.conv_layers = nn.Sequential(
             nn.Conv2d(channels, 16, kernel_size=5, stride=2, padding=2),
             nn.ReLU(),
@@ -67,27 +67,27 @@ class ActorCritic(nn.Module):
         return action.detach(), log_prob.detach()
 
     def evaluate(self, obs, action):
-        obs = obs.to(self.device)
+        # Check if there's an extra dimension and remove it
+        if obs.dim() == 5 and obs.size(1) == 1:
+            obs = obs.squeeze(1)
+
+        # Now process the adjusted tensor through single_evaluate which handles the actual operations
+        return self.single_evaluate(obs, action)
+
+    def single_evaluate(self, obs, action):
+        # Ensure the input is in the correct shape for convolutional layers
+        if obs.dim() != 4:
+            raise ValueError(f"Expected 4D input to conv2d, got {obs.size()}")
+
         obs = self.conv_layers(obs)  # Process through CNN layers
 
         mean = self.actor(obs)
         dist = MultivariateNormal(mean, self.cov_mat)
-        
         logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
         values = self.critic(obs)
-        
+
         return logprobs, values, dist_entropy
-
-    def set_action_std(self, new_action_std):
-        self.cov_var = torch.full((self.action_dim,), new_action_std, device=self.device)
-        self.cov_mat = torch.diag(self.cov_var).unsqueeze(dim=0).to(self.device)
-
-    def get_value(self, obs):
-        obs = obs.to(self.device)
-        obs = self.conv_layers(obs)  # Process through CNN layers
-
-        return self.critic(obs)
 
 
 

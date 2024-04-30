@@ -6,14 +6,17 @@ import numpy as np
 from torch.distributions import MultivariateNormal
 
 class ActorCritic(nn.Module):
-    def __init__(self, obs_dim, action_dim, action_std_init):
+    def __init__(self, obs_dim, action_dim, action_std_init, run_name):
         super(ActorCritic, self).__init__()
-        self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.device = torch.device("cpu")
-        
         self.cov_var = torch.full((self.action_dim,), action_std_init, device=self.device)
         self.cov_mat = torch.diag(self.cov_var).unsqueeze(dim=0).to(self.device)
+
+        if run_name == "VIT":
+            self.obs_dim = 195
+        else:
+            self.obs_dim = obs_dim
 
         self.actor = nn.Sequential(
                 nn.Linear(self.obs_dim, 500),
@@ -25,7 +28,7 @@ class ActorCritic(nn.Module):
                 nn.Linear(200, self.action_dim),
                 nn.Tanh()
                 )
-        
+
         self.critic = nn.Sequential(
                 nn.Linear(self.obs_dim, 500),
                 nn.Tanh(),
@@ -35,6 +38,8 @@ class ActorCritic(nn.Module):
                 nn.Tanh(),
                 nn.Linear(200, 1)
                 )
+        # print("ActorCritic initialized with obs_dim:", obs_dim, "action_dim:", action_dim)
+
 
     def forward(self, obs):
         raise NotImplementedError
@@ -54,17 +59,17 @@ class ActorCritic(nn.Module):
         
         if isinstance(obs, np.ndarray):
             obs = torch.tensor(obs, dtype=torch.float)
-            print("Converted observation shape:", obs.shape)  # 입력 ndarray를 텐서로 변환한 후의 형태 출력
+            # print("Converted observation shape:", obs.shape)  # 입력 ndarray를 텐서로 변환한 후의 형태 출력
         mean = self.actor(obs)
-        print(__file__, "Mean action shape from actor:", mean.shape)  # actor로부터 얻어진 평균 행동의 형태 출력
+        # print(__file__, "Mean action shape from actor:", mean.shape)  # actor로부터 얻어진 평균 행동의 형태 출력
         # Create our Multivariate Normal Distribution
         dist = MultivariateNormal(mean, self.cov_mat)
         # Sample an action from the distribution and get its log prob
         action = dist.sample()
         log_prob = dist.log_prob(action)
         
-        print("Sampled action shape:", action.shape)  # 샘플링된 행동의 형태 출력
-        print("Log prob shape:", log_prob.shape)  # 로그 확률의 형태 출력
+        # print("Sampled action shape:", action.shape)  # 샘플링된 행동의 형태 출력
+        # print("Log prob shape:", log_prob.shape)  # 로그 확률의 형태 출력
         # Return the sampled action and the log prob of that action
         # Note that I'm calling detach() since the action and log_prob  
         # are tensors with computation graphs, so I want to get rid
@@ -74,6 +79,8 @@ class ActorCritic(nn.Module):
         return action.detach(), log_prob.detach()
     
     def evaluate(self, obs, action):
+        # print("Input obs shape in evaluate:", obs.shape)
+        # print("Input action shape in evaluate:", action.shape)
         obs = obs.to(self.device)
         mean = self.actor(obs)
         dist = MultivariateNormal(mean, self.cov_mat)

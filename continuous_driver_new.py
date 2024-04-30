@@ -65,8 +65,8 @@ def runner():
             run_name = "CNN"
         elif exp_name == 'vit':
             run_name = "VIT"
-        elif exp_name == 'deit':
-            run_name = "DEIT"
+        elif exp_name == 'bigan':
+            run_name = "BIGAN"
             print('DEIT not implemented yet.')
         else:
             raise ValueError("Invalid experiment name.")
@@ -121,8 +121,8 @@ def runner():
         env = CarlaEnvironment(client, world,town)
     else:
         env = CarlaEnvironment(client, world,town, checkpoint_frequency=None)
-    LATENT_DIM_TEST = 50
-    encode = EncodeState(LATENT_DIM_TEST, run_name)
+    # LATENT_DIM_TEST = 50
+    encode = EncodeState(LATENT_DIM, run_name)
 
 
     #========================================================================
@@ -155,13 +155,14 @@ def runner():
             while timestep < total_timesteps:
             
                 observation = env.reset()
+                # print(f"Observation shape after reset: {observation.shape}")
                 observation = encode.process(observation)
-
+                # print(f"Observation shape after processing: {observation.shape}")
                 current_ep_reward = 0
                 t1 = datetime.now()
 
                 for t in range(args.episode_length):
-                
+                    
                     # select action with policy
                     action = agent.get_action(observation, train=True)
 

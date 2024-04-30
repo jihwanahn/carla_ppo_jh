@@ -43,12 +43,12 @@ class PPOAgent(object):
 
         self.checkpoint_file_no = 0
         
-        self.policy = ActorCritic(self.obs_dim, self.action_dim, self.action_std)
+        self.policy = ActorCritic(self.obs_dim, self.action_dim, self.action_std, self.run_name)
         self.optimizer = torch.optim.Adam([
                         {'params': self.policy.actor.parameters(), 'lr': self.lr},
                         {'params': self.policy.critic.parameters(), 'lr': self.lr}])
 
-        self.old_policy = ActorCritic(self.obs_dim, self.action_dim, self.action_std)
+        self.old_policy = ActorCritic(self.obs_dim, self.action_dim, self.action_std, self.run_name)
         self.old_policy.load_state_dict(self.policy.state_dict())
         self.MseLoss = nn.MSELoss()
 
@@ -57,12 +57,12 @@ class PPOAgent(object):
         with torch.no_grad():
             if isinstance(obs, np.ndarray):
                 obs = torch.tensor(obs, dtype=torch.float)
-                print("Converted observation shape:", obs.shape)
+                # print("Converted observation shape:", obs.shape)
             obs = obs.to(device)
-            print("Observation shape on device:", obs.shape)
+            # print("Observation shape on device:", obs.shape)
             action, logprob = self.old_policy.get_action_and_log_prob(obs)
-            print("Action shape:", action.shape)  # 얻어진 행동의 형태 출력
-            print("Logprob shape:", logprob.shape)  # 로그 확률의 형태 출력
+            # print("Action shape:", action.shape)  # 얻어진 행동의 형태 출력
+            # print("Logprob shape:", logprob.shape)  # 로그 확률의 형태 출력
         if train:
             self.memory.observation.append(obs.to(device))
             self.memory.actions.append(action)
@@ -98,6 +98,8 @@ class PPOAgent(object):
         # Normalizing the rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
+        
+        # print("Shape of observations in memory:", [o.shape for o in self.memory.observation])
 
         # convert list to tensor
         old_states = torch.squeeze(torch.stack(self.memory.observation, dim=0)).detach().to(device)

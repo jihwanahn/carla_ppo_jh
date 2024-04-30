@@ -3,6 +3,7 @@ import torch
 from autoencoder.encoder import VariationalEncoder
 from cnn.encoder import CNNEncoder
 from vit.encoder import ViTEncoder
+from bigan.encoder import BiGanEncoder
 
 #run_name
 class EncodeState():
@@ -27,6 +28,9 @@ class EncodeState():
                 self.conv_encoder.load()
                 self.conv_encoder.eval()
             
+            elif self.run_name == "BIGAN":
+                print("BIGAN not implemented yet.")
+
             else:
                 pass
 
