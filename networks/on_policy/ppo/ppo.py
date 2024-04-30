@@ -49,24 +49,28 @@ class ActorCritic(nn.Module):
         return self.critic(obs)
     
     def get_action_and_log_prob(self, obs):
-        if isinstance(obs, list):
-            obs = torch.stack(obs, dim=0)
-        elif isinstance(obs, np.ndarray):
+        # Query the actor network for a mean action.
+        # Same thing as calling self.actor.forward(obs)
+        
+        if isinstance(obs, np.ndarray):
             obs = torch.tensor(obs, dtype=torch.float)
-        # obs = obs.view(-1, self.obs_dim)
-
-        obs = obs.to(self.device)
-
-        if obs.nelement() == self.obs_dim:
-            obs = obs.view(-1, self.obs_dim)
-        else:
-            raise ValueError(f"Expected {self.obs_dim} elements but got {obs.nelement()}")
-
+            print("Converted observation shape:", obs.shape)  # 입력 ndarray를 텐서로 변환한 후의 형태 출력
         mean = self.actor(obs)
+        print(__file__, "Mean action shape from actor:", mean.shape)  # actor로부터 얻어진 평균 행동의 형태 출력
+        # Create our Multivariate Normal Distribution
         dist = MultivariateNormal(mean, self.cov_mat)
+        # Sample an action from the distribution and get its log prob
         action = dist.sample()
         log_prob = dist.log_prob(action)
         
+        print("Sampled action shape:", action.shape)  # 샘플링된 행동의 형태 출력
+        print("Log prob shape:", log_prob.shape)  # 로그 확률의 형태 출력
+        # Return the sampled action and the log prob of that action
+        # Note that I'm calling detach() since the action and log_prob  
+        # are tensors with computation graphs, so I want to get rid
+        # of the graph and just convert the action to numpy array.
+        # log prob as tensor is fine. Our computation graph will
+        # start later down the line.
         return action.detach(), log_prob.detach()
     
     def evaluate(self, obs, action):
