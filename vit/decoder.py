@@ -10,24 +10,81 @@ class ViTDecoder(nn.Module):
         super().__init__()
         self.model_file = os.path.join('vit/model', 'decoder_model.pth')
         
-        self.fc = nn.Linear(latent_dims, 512)
-        output_features = 160 * 80 * 3
+        width = 160
+        height = 80
+        self.width = width
+        self.height = height
 
-        decoder_layers = TransformerEncoderLayer(d_model=512, nhead=nhead, dropout=dropout)
+        patch_size = 16
+        self.patch_size = patch_size
+
+        self.fc = nn.Linear(latent_dims, 512)
+        self.output_projection = nn.ConvTranspose2d(512, 3, kernel_size=patch_size, stride=patch_size)
+
+        decoder_layers = TransformerEncoderLayer(d_model=512, nhead=nhead, dropout=dropout, batch_first=True)
         self.transformer_decoder = TransformerEncoder(decoder_layers, num_layers=num_decoder_layers)
         
-        self.output_projection = nn.Linear(512, output_features)
+        self.qs = nn.Parameter(torch.randn((width//patch_size)*(height//patch_size), 512))
         self.final_shape = (3, 80 , 160)
 
     def forward(self, x):
+        #x : batch 95
+        batch_size = x.shape[0]
         x = self.fc(x)
-        x = self.transformer_decoder(x.unsqueeze(0))
-        x = x.squeeze(0)
+        x = x[:, None]
+        qs = self.qs[None].repeat(batch_size, 1, 1)
+        x = torch.cat([qs, x], dim=1)
+        #x : batch 512
+        x = self.transformer_decoder(x)
+        x = x[:, :(self.width//self.patch_size)*(self.height//self.patch_size)]
+        # x : batch 20*40 512
+        x = torch.transpose(x, -1, -2)
+        # x : batch 512 20*40
+        x = x.view(batch_size, -1, self.height//self.patch_size, self.width//self.patch_size)
         x = self.output_projection(x)
-        x = torch.sigmoid(x)
+        # x : batch 3 80 160
+        x = torch.nn.functional.softmax(x, dim=1)
         x = x.view(-1, *self.final_shape)  # Reshape to the desired output dimensions
         return x
 
+    def save(self):
+        torch.save(self.state_dict(), self.model_file)
+
+    def load(self):
+        self.load_state_dict(torch.load(self.model_file))
+
+
+class CNNDecoder(nn.Module):
+    def __init__(self, latent_dims):
+        super().__init__()
+        self.model_file = os.path.join('vit/model', 'decoder_model.pth')
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dims, 256 * 6 * 5),
+            nn.LeakyReLU(),
+            nn.Unflatten(1, (256, 6, 5)),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(128),  # 배치 정규화 추가
+            nn.LeakyReLU(),
+            nn.Dropout(0.5),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64),  # 배치 정규화 추가
+            nn.LeakyReLU(),
+            nn.Dropout(0.5),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(32),  # 배치 정규화 추가
+            nn.LeakyReLU(),
+            nn.Dropout(0.5),
+            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(16),  # 배치 정규화 추가
+            nn.LeakyReLU(),
+            nn.Dropout(0.5),
+            nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1, output_padding=(0,0)),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        return self.decoder(x)
+    
     def save(self):
         torch.save(self.state_dict(), self.model_file)
 

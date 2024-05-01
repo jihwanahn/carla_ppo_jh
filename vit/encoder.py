@@ -13,20 +13,42 @@ class ViTEncoder(nn.Module):
         
         input_features = 160 * 80 * 3
 
-        self.flatten = nn.Flatten()
-        self.embedding = nn.Linear(input_features, 512)
+        width = 160
+        height = 80
+
+        patch_size = 16
+
+        self.encode = nn.Conv2d(3, patch_size*patch_size*3, kernel_size=patch_size, stride=patch_size)
+        self.flatten = nn.Flatten(start_dim=2)
+        self.embedding = nn.Linear(patch_size*patch_size*3, 512)
         
-        encoder_layers = TransformerEncoderLayer(d_model=512, nhead=nhead, dropout=dropout)
+        encoder_layers = TransformerEncoderLayer(d_model=512, nhead=nhead, dropout=dropout, batch_first=True)
         self.transformer_encoder = TransformerEncoder(encoder_layers, num_layers=num_encoder_layers)
         
+        self.positional_encoding = nn.Parameter(torch.randn((width // patch_size) * (height // patch_size), patch_size*patch_size*3))
+        self.q = nn.Parameter(torch.randn(512,))
+
         self.fc_mu = nn.Linear(512, latent_dims)
         self.fc_logvar = nn.Linear(512, latent_dims)
 
     def forward(self, x):
+        batch_size = x.shape[0]
+        # x : batch 3 80 160
+        # x : batch 16*3 20 40
+        x = self.encode(x)
         x = self.flatten(x)
+        # x : batch 16*3 20*40
+        x = torch.transpose(x, -1, -2)
+        # x : batch 20*40 16*3
+        x = x + self.positional_encoding[None]
         x = self.embedding(x)
-        x = self.transformer_encoder(x.unsqueeze(0))
-        x = x.squeeze(0)
+        # x : batch 20*40 512
+        q = self.q[None, None].repeat(batch_size, 1, 1)
+        x = torch.cat([q, x], dim=1)
+        x = self.transformer_encoder(x)
+        # x : batch 20*40+1 512
+        x = x[:, 0]
+        # x : batch 512
         mu = self.fc_mu(x)
         logvar = self.fc_logvar(x)
 

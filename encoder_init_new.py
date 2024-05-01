@@ -3,7 +3,7 @@ import torch
 from autoencoder.encoder import VariationalEncoder
 from cnn.encoder import CNNEncoder
 from vit.encoder import ViTEncoder
-from bigan.encoder import BiGanEncoder
+from bigan.encoder import BiGANEncoder
 
 #run_name
 class EncodeState():

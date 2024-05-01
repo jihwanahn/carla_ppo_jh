@@ -4,3 +4,4 @@ autoencoder/dataset/*
 autoencoder/dataset
 .vs
 out_split
+*/reconstructed

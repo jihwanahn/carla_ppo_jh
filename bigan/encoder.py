@@ -29,7 +29,7 @@ class BiGANEncoder(nn.Module):
             nn.LeakyReLU())
 
         self.linear = nn.Sequential(
-            nn.Linear(9*4*256, 1024),
+            nn.Linear(9216, 1024),
             nn.LeakyReLU())
 
         self.mu = nn.Linear(1024, latent_dims)

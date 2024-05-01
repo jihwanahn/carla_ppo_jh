@@ -12,7 +12,7 @@ from datetime import datetime
 # Hyper-parameters
 NUM_EPOCHS = 50
 BATCH_SIZE = 32
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 0.0002
 LATENT_SPACE = 95
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -23,7 +23,8 @@ class BiGAN(nn.Module):
         self.model_file = os.path.join('bigan/model', 'bigan.pth')
         self.encoder = BiGANEncoder(latent_dims)
         self.generator = BiGANGenerator(latent_dims)
-        self.discriminator = BiGANDiscriminator(latent_dims, 3*64*64)
+        input_dims = 3*160*80
+        self.discriminator = BiGANDiscriminator(latent_dims, input_dims)
 
     def forward(self, x):
         x = x.to(device)
@@ -48,11 +49,24 @@ def train(model, trainloader, optim_G, optim_D):
     for(x, _) in trainloader:
         x = x.to(device)
         z_real = model.encoder(x)
-        z_fake = torch.randn(x.size(0), 95, device=device)
+        x_flatten = x.view(x.size(0), -1)
+        combined_input = torch.cat((x_flatten, z_real), dim=-1)
+        print(f"Combined input shape: {combined_input.shape}")
+        real_validity = model.discriminator(x, z_real)
+
+        z_fake = torch.randn(x.size(0), LATENT_SPACE, device=device)
         fake_imgs = model.generator(z_fake)
 
-        real_validity = model.discriminator(x, z_real)
+        # Debugging the dimensions
+        print("Shape of fake_imgs:", fake_imgs.shape)  # Should be similar to x
+        print("Shape of z_fake:", z_fake.shape)  # Should match z_real
+        
+        fake_imgs_flatten = fake_imgs.view(fake_imgs.size(0), -1)
+        combined_input_fake = torch.cat((fake_imgs_flatten, z_fake), dim=-1)
+        print(f"Combined input fake shape: {combined_input_fake.shape}")
+
         fake_validity = model.discriminator(fake_imgs.detach(), z_fake)
+        
         d_loss = -(torch.log(real_validity) + torch.log(1 - fake_validity)).mean()
 
         optim_D.zero_grad()
@@ -76,7 +90,7 @@ def test(model, testloader):
         for x, _ in testloader:
             x = x.to(device)
             z_real = model.encoder(x)
-            z_fake = torch.randn(x.size(0), 95, device=device)
+            z_fake = torch.randn(x.size(0), LATENT_SPACE, device=device)
             fake_imgs = model.generator(z_fake)
 
             real_validity = model.discriminator(x, z_real)
@@ -89,41 +103,39 @@ def test(model, testloader):
 
 def main():
     data_dir = 'autoencoder/dataset/'
-    transform = transforms.Compose([
-        transforms.Resize(64),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-    ])
-    train_dataset = datasets.ImageFolder(data_dir+'train', transform=transform)
-    test_dataset = datasets.ImageFolder(data_dir+'test', transform=transform)
-
-    m = len(train_dataset)
-
-    train_dataset, val_dataset = random_split(train_dataset, [int(m-m*0.2), int(m*0.2)])
-
-    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False)
-
-    model = BiGAN(latent_dims=LATENT_SPACE).to(device)
-    # model.load()
-
-    optimizer_G = torch.optim.Adam(list(model.encoder.parameters()) + list(model.generator.parameters()), lr=0.0002, betas=(0.5, 0.999))
-    optimizer_D = torch.optim.Adam(model.discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999))
 
     writer = SummaryWriter(f"runs/bigan/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
 
+    # Applying Transformation
+    train_transforms = transforms.Compose([transforms.RandomRotation(30),transforms.RandomHorizontalFlip(),transforms.ToTensor()])
+    test_transforms = transforms.Compose([transforms.ToTensor()])
+
+    train_dataset = datasets.ImageFolder(data_dir+'train', transform=train_transforms)
+    test_dataset = datasets.ImageFolder(data_dir+'test', transform=test_transforms)
+
+    m = len(train_dataset)
+    train_dataset, val_dataset = random_split(train_dataset, [int(m-m*0.2), int(m*0.2)])
+
+    # Data Loading
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+    model = BiGAN(latent_dims=LATENT_SPACE).to(device)
+    optimizer_G = torch.optim.Adam(list(model.encoder.parameters()) + list(model.generator.parameters()), lr=LEARNING_RATE, betas=(0.5, 0.999))
+    optimizer_D = torch.optim.Adam(model.discriminator.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
+
+
     for epoch in range(NUM_EPOCHS):
         train_loss = train(model, train_loader, optimizer_G, optimizer_D)
-        writer.add_scalar('Loss/Train', train_loss, epoch)
+        writer.add_scalar("Training Loss/epoch", train_loss, epoch+1)
 
         val_loss = test(model, val_loader)
-        writer.add_scalar('Loss/Validation', val_loss, epoch)
+        writer.add_scalar("Validation Loss/epoch", val_loss, epoch+1)
 
-        print(f"[Epoch {epoch}/{NUM_EPOCHS}] Train Loss: {train_loss}, Val Loss: {val_loss}")
+        print('\nEPOCH {}/{} \t train loss {:.3f} \t val loss {:.3f}'.format(epoch + 1, NUM_EPOCHS,train_loss,val_loss))
 
-    writer.close()
     model.save()
-  
+
 if __name__ == "__main__":
     main()
 
