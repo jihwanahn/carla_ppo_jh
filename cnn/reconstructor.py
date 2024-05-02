@@ -15,24 +15,10 @@ from PIL import Image
 
 # Hyper-parameters
 BATCH_SIZE = 1
-LATENT_SPACE = 95
+LATENT_SPACE = 512
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-def unnormalize(img):
-    device = img.device
-    
-    if img.dim() == 4:
-        mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(1, 3, 1, 1)
-        std = torch.tensor([0.229, 0.224, 0.225], device=device).view(1, 3, 1, 1)
-    else:
-        mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(3, 1, 1)
-        std = torch.tensor([0.229, 0.224, 0.225], device=device).view(3, 1, 1)
-
-    img = img.mul(std).add(mean)
-    img = img.clamp(0, 1)
-    return img
 
 class CNNAutoencoder(nn.Module):
 
@@ -60,7 +46,7 @@ class CNNAutoencoder(nn.Module):
 def main():
     data_dir = 'autoencoder/dataset/'
 
-    test_transforms = transforms.Compose([transforms.Resize((160, 80)),transforms.ToTensor()])
+    test_transforms = transforms.Compose([transforms.ToTensor()])
 
     test_data = datasets.ImageFolder(data_dir+'test', transform=test_transforms)
 
@@ -75,11 +61,8 @@ def main():
             x = x.to(device)
             x_hat = model(x)
             x_hat = x_hat.cpu()
-            # if x_hat.dim() == 4 and x_hat.size(0) == 1:
             x_hat = x_hat.squeeze(0)
-            
-            # x_hat = unnormalize(x_hat)
-            
+                        
             img = transforms.ToPILImage()(x_hat)
 
             image_filename = str(count) + '.png'

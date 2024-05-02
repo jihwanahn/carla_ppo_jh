@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Import the newly defined encoder and decoder
 from encoder import ViTEncoder
-from decoder import ViTDecoder, CNNDecoder
+from decoder import ViTDecoder, Decoder
 
 # Hyper-parameters
 NUM_EPOCHS = 1000
@@ -22,8 +22,8 @@ class ViTAutoencoder(nn.Module):
     def __init__(self, input_dim, output_dim, latent_dims, nhead, num_layers, dropout=0.1):
         super(ViTAutoencoder, self).__init__()
         self.encoder = ViTEncoder(latent_dims, nhead, num_layers, dropout)
-        self.decoder = ViTDecoder(latent_dims, nhead, num_layers, dropout)
-        self.decoder2 = CNNDecoder(latent_dims)
+        self.decoder2 = ViTDecoder(latent_dims, nhead, num_layers, dropout)
+        self.decoder = Decoder(latent_dims)
 
     def forward(self, x):
 
@@ -45,6 +45,7 @@ class ViTAutoencoder(nn.Module):
         return mu + eps * std
     
     def loss_function(self, recon_x, x, mu, logvar):
+        MSE = nn.functional.mse_loss(recon_x, x, reduction='mean')
         BCE = nn.functional.binary_cross_entropy(recon_x, x, reduction='mean')
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
         KLD = KLD / BATCH_SIZE

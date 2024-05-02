@@ -9,27 +9,20 @@ class CNNDecoder(nn.Module):
         super().__init__()
         self.model_file = os.path.join('cnn/model', 'simple_decoder.pth')
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dims, 256 * 7 * 7),
+            nn.Linear(latent_dims, 512 * 5 * 3),  # Adjusted to suit the required output dimensions
             nn.LeakyReLU(),
-            nn.Unflatten(1, (256, 7, 7)),
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(128),  # 배치 정규화 추가
+            nn.Unflatten(1, (512, 5, 3)),
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),  
             nn.LeakyReLU(),
-            nn.Dropout(0.5),
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(64),  # 배치 정규화 추가
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),  
             nn.LeakyReLU(),
-            nn.Dropout(0.5),
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(32),  # 배치 정규화 추가
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  
             nn.LeakyReLU(),
-            nn.Dropout(0.5),
-            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(16),  # 배치 정규화 추가
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),  
             nn.LeakyReLU(),
-            nn.Dropout(0.5),
-            nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1, output_padding=(0,0)),
-            nn.Sigmoid()
+            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1), 
+            nn.Tanh(),  # Changing from Sigmoid to Tanh for normalized image output
+            nn.AdaptiveAvgPool2d((80, 160))  # Ensures the output is exactly 160x80
         )
 
     def forward(self, x):
