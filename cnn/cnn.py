@@ -17,9 +17,9 @@ from tqdm import tqdm
 
 # Hyper-parameters
 NUM_EPOCHS = 50#1000
-BATCH_SIZE = 512
+BATCH_SIZE = 128
 LEARNING_RATE = 1e-4#1e-4
-LATENT_SPACE = 512
+LATENT_SPACE = 95
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -57,6 +57,7 @@ def train(model, trainloader, optimizer):
         x = x.to(device)
         x_hat = model(x)
         loss = F.mse_loss(x_hat, x, reduction='mean')
+        # loss = ssim_loss(x, x_hat)
         optimizer.zero_grad()
 
         loss.backward()
@@ -74,6 +75,7 @@ def test(model, testloader):
             x = x.to(device)
             x_hat = model(x)
             loss = F.mse_loss(x_hat, x, reduction='mean')
+            # loss = ssim_loss(x, x_hat)
             val_loss += loss.item() * x.size(0)
     return val_loss / len(testloader.dataset)
 
@@ -83,15 +85,14 @@ def main():
     writer = SummaryWriter(f"runs/cnn/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
 
     train_transforms = transforms.Compose([
+        transforms.Resize((80, 160)),
         transforms.RandomRotation(30),
         transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.ToTensor()
         ])
     
     test_transforms = transforms.Compose([
-        transforms.ToTensor(),
-        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.ToTensor()
         ])
     
     train_data = datasets.ImageFolder(data_dir + 'train', transform=train_transforms)

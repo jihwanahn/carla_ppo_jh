@@ -15,7 +15,7 @@ from PIL import Image
 
 # Hyper-parameters
 BATCH_SIZE = 1
-LATENT_SPACE = 512
+LATENT_SPACE = 95
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")

@@ -8,20 +8,23 @@ from torch.distributions import MultivariateNormal
 class ActorCritic(nn.Module):
     def __init__(self, obs_dim, action_dim, action_std_init, run_name):
         super(ActorCritic, self).__init__()
+        self.obs_dim = obs_dim
+        # print("Observation dimension:", obs_dim)
         self.action_dim = action_dim
+        # print("Action dimension:", action_dim)
         self.device = torch.device("cpu")
         self.cov_var = torch.full((self.action_dim,), action_std_init, device=self.device)
         self.cov_mat = torch.diag(self.cov_var).unsqueeze(dim=0).to(self.device)
 
-        if run_name == "VIT":
-            self.obs_dim = 195
-        else:
-            self.obs_dim = obs_dim
+        # if run_name == "VIT":
+        #     self.obs_dim = 195
+        # else:
+        #     self.obs_dim = obs_dim
 
         self.actor = nn.Sequential(
-                nn.Linear(self.obs_dim, 500),
+                nn.Linear(self.obs_dim, 512),
                 nn.Tanh(),
-                nn.Linear(500, 300),
+                nn.Linear(512, 300),
                 nn.Tanh(),
                 nn.Linear(300, 200),
                 nn.Tanh(),
@@ -30,9 +33,9 @@ class ActorCritic(nn.Module):
                 )
 
         self.critic = nn.Sequential(
-                nn.Linear(self.obs_dim, 500),
+                nn.Linear(self.obs_dim, 512),
                 nn.Tanh(),
-                nn.Linear(500, 300),
+                nn.Linear(512, 300),
                 nn.Tanh(),
                 nn.Linear(300, 200),
                 nn.Tanh(),
@@ -60,6 +63,7 @@ class ActorCritic(nn.Module):
         if isinstance(obs, np.ndarray):
             obs = torch.tensor(obs, dtype=torch.float)
             # print("Converted observation shape:", obs.shape)  # 입력 ndarray를 텐서로 변환한 후의 형태 출력
+        # print("Observation shape on device:", obs.shape)  # 입력 텐서의 형태 출력
         mean = self.actor(obs)
         # print(__file__, "Mean action shape from actor:", mean.shape)  # actor로부터 얻어진 평균 행동의 형태 출력
         # Create our Multivariate Normal Distribution

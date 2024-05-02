@@ -17,27 +17,26 @@ def reconstruct_images(model, data_loader, output_dir ,num_images=2000):
             if i >= num_images:
                 break
             data = data.to(device)
-            reconstructed, _, _ = model(data)
+            reconstructed = model(data)#, _, _ = model(data)
 
             # Save original and reconstructed images
             for j in range(data.size(0)):
-                save_image(data[j], os.path.join(output_dir, f'original_{i * data_loader.batch_size + j}.png'))
-                save_image(reconstructed[j], os.path.join(output_dir, f'reconstructed_{i * data_loader.batch_size + j}.png'))
+                # save_image(data[j], os.path.join(output_dir, f'original_{i * data_loader.batch_size + j}.png'))
+                save_image(reconstructed[j], os.path.join(output_dir, f'{i * data_loader.batch_size + j}.png'))
 
 
 def main():
     # Load dataset
     transform = transforms.Compose([
-        # transforms.Resize((160, 80)),  # Resize images to match input dimensions expected by the model
         transforms.ToTensor()
     ])
-    dataset = datasets.ImageFolder('vit/dataset/test', transform=transform)
-    data_loader = DataLoader(dataset, batch_size=6, shuffle=True)
+    dataset = datasets.ImageFolder('autoencoder/dataset/test', transform=transform)
+    data_loader = DataLoader(dataset, batch_size=1, shuffle=True)
 
     # Initialize VAE Model
     input_dim = (3, 160, 80)  # Adjust based on your actual input dimensions
     output_dim = (3, 160, 80)
-    latent_dims = 50
+    latent_dims = 95
     nhead = 8
     num_layers = 3
     dropout = 0.1

@@ -7,12 +7,13 @@ from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
+
 # Import the newly defined encoder and decoder
 from encoder import ViTEncoder
 from decoder import ViTDecoder, Decoder
 
 # Hyper-parameters
-NUM_EPOCHS = 1000
+NUM_EPOCHS = 50
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
 
@@ -26,18 +27,19 @@ class ViTAutoencoder(nn.Module):
         self.decoder = Decoder(latent_dims)
 
     def forward(self, x):
-
+        x = x.to(device)
         # x : (batch_size, 3, 160, 80)
         combined = self.encoder(x)
         # 가정: `combined` 텐서는 첫 번째 절반은 `mu`, 두 번째 절반은 `logvar`
-        mid_point = combined.size(1) // 2
-        mu = combined[:, :mid_point]
-        logvar = combined[:, mid_point:]
+        # mid_point = combined.size(1) // 2
+        # mu = combined[:, :mid_point]
+        # logvar = combined[:, mid_point:]
 
         # 나머지 모델 계산을 계속 진행
-        z = self.reparameterize(mu, logvar)
-        recon_x = self.decoder(z)
-        return recon_x, mu, logvar
+        # z = self.reparameterize(mu, logvar)
+        # recon_x = self.decoder(z)
+        # return recon_x, mu, logvar
+        return self.decoder(combined)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -46,10 +48,16 @@ class ViTAutoencoder(nn.Module):
     
     def loss_function(self, recon_x, x, mu, logvar):
         MSE = nn.functional.mse_loss(recon_x, x, reduction='mean')
+        CE = nn.functional.cross_entropy(recon_x, x, reduction='mean')
         BCE = nn.functional.binary_cross_entropy(recon_x, x, reduction='mean')
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
         KLD = KLD / BATCH_SIZE
         return BCE, KLD
+    
+    def loss_function(self, recon_x, x):
+        MSE = nn.functional.mse_loss(recon_x, x, reduction='mean')
+        CE = nn.functional.cross_entropy(recon_x, x, reduction='mean')
+        return MSE
 
     def train_model(self, train_loader, valid_loader, optimizer, epochs):
         writer = SummaryWriter(f"runs/vit/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
@@ -58,22 +66,26 @@ class ViTAutoencoder(nn.Module):
             for data, _ in train_loader:
                 data = data.to(device)
                 optimizer.zero_grad()
-                recon_batch, mu, logvar = self(data)
-                BCE, KLD = self.loss_function(recon_batch, data, mu, logvar)
-                loss = BCE # + KLD * 0.0001
+                recon_batch = self(data)#, mu, logvar = self(data)
+                # BCE, KLD = self.loss_function(recon_batch, data, mu, logvar)
+                MSE = self.loss_function(recon_batch, data)
+                loss = MSE # + KLD * 0.0001
                 loss.backward()
                 optimizer.step()
             writer.add_scalar("Training Loss/epoch", loss.item(), epoch+1)
-            print(f'Epoch {epoch+1}, BCE Loss: {BCE.item()}, KLD Loss: {KLD.item()}')            
+            # print(f'Epoch {epoch+1}, BCE Loss: {BCE.item()}, KLD Loss: {KLD.item()}')
+            print(f"Epoch {epoch+1}, MSE Loss: {MSE.item()}")
 
             self.eval()
             with torch.no_grad():
                 val_loss = 0
                 for data, _ in valid_loader:
                     data = data.to(device)
-                    recon_batch, mu, logvar = self(data)
-                    BCE, KLD = self.loss_function(recon_batch, data, mu, logvar)
-                    val_loss += (BCE + KLD).item()
+                    recon_batch=self(data)#, mu, logvar = self(data)
+                    # BCE, KLD = self.loss_function(recon_batch, data, mu, logvar)
+                    MSE = self.loss_function(recon_batch, data)
+                    # val_loss += (BCE + KLD).item()
+                    val_loss += MSE.item()
                 val_loss /= len(valid_loader.dataset)
                 writer.add_scalar("Validation Loss/epoch", val_loss, epoch+1)
                 print(f'Epoch {epoch+1}, Validation Loss: {val_loss}')
