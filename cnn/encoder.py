@@ -6,14 +6,19 @@ import torchvision.models as models
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 class CNNEncoder(nn.Module):
-    def __init__(self, latent_dims):
+    def __init__(self, latent_dims, data_type):
         super(CNNEncoder, self).__init__()
-        self.model_file = os.path.join('cnn/model', 'resnet_encoder.pth')
+        if data_type == 'ss':
+            self.model_file = os.path.join('cnn/model', 'cnn_encoder_ss.pth')
+        elif data_type == 'rgb':
+            self.model_file = os.path.join('cnn/model', 'cnn_encoder_rgb.pth')
         
-        original_model = models.resnet18(pretrained=True)
-        self.features = nn.Sequential(*list(original_model.children())[:-1])  # 마지막 fc layer 제외
+        resnet18_pretrained = models.resnet18(pretrained=True)
+        # self.features = resnet18_pretrained.fc.in_features
+        self.features = nn.Sequential(*list(resnet18_pretrained.children())[:-1])  # 마지막 fc layer 제외
         self.dropout = nn.Dropout(0.5)
-        self.fc = nn.Linear(original_model.fc.in_features, latent_dims)
+        # self.dropout = resnet18_pretrained.
+        self.fc = nn.Linear(resnet18_pretrained.fc.in_features, latent_dims)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
@@ -28,5 +33,9 @@ class CNNEncoder(nn.Module):
     def save(self):
         torch.save(self.state_dict(), self.model_file)
     
-    def load(self):
+    def load(self, data_type):
+        if data_type == 'ss':
+            self.model_file = os.path.join('cnn/model', 'cnn_encoder_ss.pth')
+        elif data_type == 'rgb':
+            self.model_file = os.path.join('cnn/model', 'cnn_encoder_rgb.pth')
         self.load_state_dict(torch.load(self.model_file))

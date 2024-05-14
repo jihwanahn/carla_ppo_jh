@@ -6,10 +6,13 @@ import torch.nn as nn
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 class VariationalEncoder(nn.Module):
-    def __init__(self, latent_dims):  
+    def __init__(self, latent_dims, data_type):  
         super(VariationalEncoder, self).__init__()
-
-        self.model_file = os.path.join('autoencoder/model', 'var_encoder_model.pth')
+        if data_type == 'ss':
+            self.model_file = os.path.join('autoencoder/model', 'var_encoder_ss.pth')
+        elif data_type == 'rgb':
+            self.model_file = os.path.join('autoencoder/model', 'var_encoder_rgb.pth')
+        # self.model_file = os.path.join('autoencoder/model', 'var_encoder_model.pth')
 
         self.encoder_layer1 = nn.Sequential(
             nn.Conv2d(3, 32, 4, stride=2),  # 79, 39
@@ -58,5 +61,10 @@ class VariationalEncoder(nn.Module):
     def save(self):
         torch.save(self.state_dict(), self.model_file)
 
-    def load(self):
+    def load(self, data_type):
+        if data_type == 'ss':
+            self.model_file = os.path.join('autoencoder/model', 'var_encoder_ss.pth')
+        elif data_type == 'rgb':
+            self.model_file = os.path.join('autoencoder/model', 'var_encoder_rgb.pth')
+        print(f"Loading model from {self.model_file}")
         self.load_state_dict(torch.load(self.model_file))

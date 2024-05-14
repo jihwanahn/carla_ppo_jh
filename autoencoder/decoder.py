@@ -7,9 +7,13 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 
 class Decoder(nn.Module):
     
-    def __init__(self, latent_dims):
+    def __init__(self, latent_dims, data_type):
         super().__init__()
-        self.model_file = os.path.join('autoencoder/model', 'decoder_model.pth')
+        if data_type == 'ss':
+            self.model_file = os.path.join('autoencoder/model', 'decoder_model_ss.pth')
+        elif data_type == 'rgb':
+            self.model_file = os.path.join('autoencoder/model', 'decoder_model_rgb.pth')
+        # self.model_file = os.path.join('autoencoder/model', 'decoder_model.pth')
         self.decoder_linear = nn.Sequential(
             nn.Linear(latent_dims, 1024),
             nn.LeakyReLU(),
@@ -38,5 +42,10 @@ class Decoder(nn.Module):
     def save(self):
         torch.save(self.state_dict(), self.model_file)
 
-    def load(self):
+    def load(self, data_type):
+        if data_type == 'ss':
+            self.model_file = os.path.join('autoencoder/model', 'decoder_model_ss.pth')
+        elif data_type == 'rgb':
+            self.model_file = os.path.join('autoencoder/model', 'decoder_model_rgb.pth')
+        print(f"Loading model from {self.model_file}")
         self.load_state_dict(torch.load(self.model_file))

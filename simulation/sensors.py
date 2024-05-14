@@ -5,15 +5,17 @@ import pygame
 from simulation.connection import carla
 from simulation.settings import RGB_CAMERA, SSC_CAMERA
 
-
 # ---------------------------------------------------------------------|
 # ------------------------------- CAMERA |
 # ---------------------------------------------------------------------|
 
 class CameraSensor():
 
-    def __init__(self, vehicle):
-        self.sensor_name = SSC_CAMERA
+    def __init__(self, vehicle, sensor_type='SSC'):
+        if sensor_type == 'SSC':
+            self.sensor_name = SSC_CAMERA
+        elif sensor_type == 'RGB':
+            self.sensor_name = RGB_CAMERA
         self.parent = vehicle
         self.front_camera = list()
         world = self.parent.get_world()
@@ -57,6 +59,7 @@ class CameraSensorEnv:
         self.sensor_name = RGB_CAMERA
         self.parent = vehicle
         self.surface = None
+        self.frame_id = 0
         world = self.parent.get_world()
         self.sensor = self._set_camera_sensor(world)
         weak_self = weakref.ref(self)
@@ -85,6 +88,7 @@ class CameraSensorEnv:
         self.surface = pygame.surfarray.make_surface(placeholder2.swapaxes(0, 1))
         self.display.blit(self.surface, (0, 0))
         pygame.display.flip()
+
 
 
 

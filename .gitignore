@@ -5,3 +5,4 @@ autoencoder/dataset
 .vs
 out_split
 */reconstructed
+vit/dataset

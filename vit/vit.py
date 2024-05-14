@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
-
+import argparse
 
 # Import the newly defined encoder and decoder
 from encoder import ViTEncoder
@@ -20,11 +20,15 @@ LEARNING_RATE = 1e-4
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ViTAutoencoder(nn.Module):
-    def __init__(self, input_dim, output_dim, latent_dims, nhead, num_layers, dropout=0.1):
+    def __init__(self, input_dim, output_dim, latent_dims, data_type, nhead, num_layers, dropout=0.1):
         super(ViTAutoencoder, self).__init__()
-        self.encoder = ViTEncoder(latent_dims, nhead, num_layers, dropout)
-        self.decoder2 = ViTDecoder(latent_dims, nhead, num_layers, dropout)
-        self.decoder = Decoder(latent_dims)
+        self.encoder = ViTEncoder(latent_dims,data_type, nhead, num_layers, dropout)
+        self.decoder2 = ViTDecoder(latent_dims,data_type, nhead, num_layers, dropout)
+        self.decoder = Decoder(latent_dims,data_type)
+        if data_type == 'ss':
+            self.model_file = os.path.join('vit/model', 'vit_autoencoder_ss.pth')
+        elif data_type == 'rgb':
+            self.model_file = os.path.join('vit/model', 'vit_autoencoder_rgb.pth')
 
     def forward(self, x):
         x = x.to(device)
@@ -91,18 +95,26 @@ class ViTAutoencoder(nn.Module):
                 print(f'Epoch {epoch+1}, Validation Loss: {val_loss}')
 
     def save(self):
-        torch.save(self.state_dict(), 'vit/model/vit_autoencoder.pth')
+        torch.save(self.state_dict(), self.model_file)
         self.encoder.save()
         self.decoder.save()
 
     def load(self):
-        self.load_state_dict(torch.load('vit/model/vit_autoencoder.pth'))
-        self.encoder.load()
-        self.decoder.load()
+        self.load_state_dict(torch.load(self.model_file))
+        self.encoder.load()#self.data_type)
+        self.decoder.load()#self.data_type)
 
 # Define the main function to run the VAE
 def main():
-    data_dir = 'autoencoder/dataset/'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_type', type=str, default='ss', help='Data type: ss or rgb')
+    args = parser.parse_args()
+
+    if args.data_type == 'ss':
+        data_dir = 'autoencoder/dataset/'
+    elif args.data_type == 'rgb':
+        data_dir = 'autoencoder/dataset_rgb/'
+    # data_dir = 'autoencoder/dataset/'
     data_dir2 = 'vit/dataset/'
     train_transforms = transforms.Compose([transforms.RandomRotation(30), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
     test_transforms = transforms.Compose([transforms.ToTensor()])
@@ -124,7 +136,7 @@ def main():
     num_layers = 3
     dropout = 0.1
 
-    model = ViTAutoencoder(input_dim, output_dim, latent_dims, nhead, num_layers, dropout).to(device)
+    model = ViTAutoencoder(input_dim, output_dim, latent_dims, args.data_type, nhead, num_layers, dropout).to(device)
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     model.train_model(train_loader, valid_loader, optimizer, NUM_EPOCHS)
 

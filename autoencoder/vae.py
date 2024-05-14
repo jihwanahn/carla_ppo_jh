@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from encoder import VariationalEncoder
 from decoder import Decoder
 from datetime import datetime
-
+import argparse
 
 # Hyper-parameters
 NUM_EPOCHS = 50
@@ -24,11 +24,16 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, latent_dims):
+    def __init__(self, latent_dims, data_type):
         super(VariationalAutoencoder, self).__init__()
-        self.model_file = os.path.join('autoencoder/model', 'var_autoencoder.pth')
-        self.encoder = VariationalEncoder(latent_dims)
-        self.decoder = Decoder(latent_dims)
+        self.data_type = data_type
+        if self.data_type == 'ss':
+            self.model_file = os.path.join('autoencoder/model', 'var_autoencoder_ss.pth')
+        elif self.data_type == 'rgb':
+            self.model_file = os.path.join('autoencoder/model', 'var_autoencoder_rgb.pth')
+        # self.model_file = os.path.join('autoencoder/model', 'var_autoencoder.pth')
+        self.encoder = VariationalEncoder(latent_dims, data_type)
+        self.decoder = Decoder(latent_dims, data_type)
 
     def forward(self, x):
         x = x.to(device)
@@ -42,8 +47,8 @@ class VariationalAutoencoder(nn.Module):
     
     def load(self):
         self.load_state_dict(torch.load(self.model_file))
-        self.encoder.load()
-        self.decoder.load()
+        self.encoder.load(self.data_type)
+        self.decoder.load(self.data_type)
 
 def train(model, trainloader, optim):
     model.train()
@@ -79,10 +84,16 @@ def test(model, testloader):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_type', type=str, default='ss', help='Data type: ss or rgb')
 
-    data_dir = 'autoencoder/dataset/'
+    args = parser.parse_args()
+    if args.data_type == 'ss':
+        data_dir = 'autoencoder/dataset/'
+    elif args.data_type == 'rgb':
+        data_dir = 'autoencoder/dataset_rgb/'
 
-    writer = SummaryWriter(f"runs/auto-encoder/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+    writer = SummaryWriter(f"runs/auto-encoder_{args.data_type}/{datetime.now().strftime('%Y%m%d-%H%M%S')}")
     
     # Applying Transformation
     train_transforms = transforms.Compose([transforms.RandomRotation(30),transforms.RandomHorizontalFlip(),transforms.ToTensor()])
@@ -100,7 +111,7 @@ def main():
     validloader = torch.utils.data.DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
     testloader = torch.utils.data.DataLoader(test_data, batch_size=BATCH_SIZE)
     
-    model = VariationalAutoencoder(latent_dims=LATENT_SPACE).to(device)
+    model = VariationalAutoencoder(latent_dims=LATENT_SPACE, data_type=args.data_type).to(device)
     optim = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
     print(f'Selected device :) :) :) {device}')

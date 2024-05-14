@@ -9,7 +9,7 @@ from simulation.settings import *
 
 class CarlaEnvironment():
 
-    def __init__(self, client, world, town, checkpoint_frequency=100, continuous_action=True) -> None:
+    def __init__(self, client, world, town, checkpoint_frequency=100, continuous_action=True, sensor_type='SSC_CAMERA') -> None:
 
 
         self.client = client
@@ -27,6 +27,7 @@ class CarlaEnvironment():
         self.checkpoint_frequency = checkpoint_frequency
         self.route_waypoints = None
         self.town = town
+        self.sensor_type = sensor_type
         
         # Objects to be kept alive
         self.camera_obj = None
@@ -83,7 +84,7 @@ class CarlaEnvironment():
 
 
             # Camera Sensor
-            self.camera_obj = CameraSensor(self.vehicle)
+            self.camera_obj = CameraSensor(self.vehicle, self.sensor_type)
             while(len(self.camera_obj.front_camera) == 0):
                 time.sleep(0.0001)
             self.image_obs = self.camera_obj.front_camera.pop(-1)

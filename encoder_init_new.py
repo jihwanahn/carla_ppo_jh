@@ -7,20 +7,21 @@ from bigan.encoder import BiGANEncoder
 
 #run_name
 class EncodeState():
-    def __init__(self, latent_dim, run_name):
+    def __init__(self, latent_dim, run_name, data_type):
         self.latent_dim = latent_dim
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.run_name = run_name
+        self.data_type = data_type
 
         try:
             if self.run_name == "VAE":
-                self.conv_encoder = VariationalEncoder(self.latent_dim).to(self.device)
-                self.conv_encoder.load()
+                self.conv_encoder = VariationalEncoder(self.latent_dim, data_type='ss').to(self.device)
+                self.conv_encoder.load(data_type=self.data_type)
                 self.conv_encoder.eval()
 
             elif self.run_name == "CNN":
                 self.conv_encoder = CNNEncoder(self.latent_dim).to(self.device)
-                self.conv_encoder.load()
+                self.conv_encoder.load(data_type=self.data_type)
                 self.conv_encoder.eval()
 
             elif self.run_name == "VIT":

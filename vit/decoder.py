@@ -6,9 +6,13 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ViTDecoder(nn.Module):
-    def __init__(self, latent_dims, nhead, num_decoder_layers, dropout=0.1):
+    def __init__(self, latent_dims, data_type, nhead, num_decoder_layers, dropout=0.1):
         super().__init__()
-        self.model_file = os.path.join('vit/model', 'decoder_model.pth')
+        if data_type == 'ss':
+            self.model_file = os.path.join('vit/model', 'decoder_model_ss.pth')
+        elif data_type == 'rgb':
+            self.model_file = os.path.join('vit/model', 'decoder_model_rgb.pth')
+        # self.model_file = os.path.join('vit/model', 'decoder_model.pth')
         
         width = 160
         height = 80
@@ -56,9 +60,13 @@ class ViTDecoder(nn.Module):
 
 class Decoder(nn.Module):
     
-    def __init__(self, latent_dims):
+    def __init__(self, latent_dims, data_type):
         super().__init__()
-        self.model_file = os.path.join('vit/model', 'decoder_model.pth')
+        if data_type == 'ss':
+            self.model_file = os.path.join('vit/model', 'decoder_model_ss.pth')
+        elif data_type == 'rgb':
+            self.model_file = os.path.join('vit/model', 'decoder_model_rgb.pth')
+        # self.model_file = os.path.join('vit/model', 'decoder_model.pth')
         self.decoder_linear = nn.Sequential(
             nn.Linear(latent_dims, 1024),
             nn.LeakyReLU(),
@@ -86,6 +94,8 @@ class Decoder(nn.Module):
     
     def save(self):
         torch.save(self.state_dict(), self.model_file)
+        print(f"Saving model to {self.model_file}")
 
     def load(self):
         self.load_state_dict(torch.load(self.model_file))
+        print(f"Loading model from {self.model_file}")

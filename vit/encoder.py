@@ -6,10 +6,15 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ViTEncoder(nn.Module):
-    def __init__(self, latent_dims, nhead, num_encoder_layers, dropout=0.1):
+    def __init__(self, latent_dims, data_type, nhead, num_encoder_layers, dropout=0.1):
         super(ViTEncoder, self).__init__()
         self.latent_dims = latent_dims
-        self.model_file = os.path.join('vit/model', 'vit_encoder_model.pth')
+        self.data_type = data_type
+        if self.data_type == 'ss':
+            self.model_file = os.path.join('vit/model', 'vit_encoder_model_ss.pth')
+        elif self.data_type == 'rgb':
+            self.model_file = os.path.join('vit/model', 'vit_encoder_model_rgb.pth')
+        # self.model_file = os.path.join('vit/model', 'vit_encoder_model.pth')
         
         input_features = 160 * 80 * 3
 
@@ -58,3 +63,4 @@ class ViTEncoder(nn.Module):
 
     def load(self):
         self.load_state_dict(torch.load(self.model_file))
+        print(f"Loading model from {self.model_file}")

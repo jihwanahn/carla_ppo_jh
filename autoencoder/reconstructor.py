@@ -11,7 +11,8 @@ from torch.utils.data import DataLoader, random_split
 from encoder import VariationalEncoder
 from decoder import Decoder
 from PIL import Image
-
+import argparse
+from tqdm import tqdm
 
 # Hyper-parameters
 BATCH_SIZE = 1
@@ -22,11 +23,16 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, latent_dims):
+    def __init__(self, latent_dims, data_type):
         super(VariationalAutoencoder, self).__init__()
-        self.model_file = os.path.join('autoencoder/model', 'var_autoencoder.pth')
-        self.encoder = VariationalEncoder(latent_dims)
-        self.decoder = Decoder(latent_dims)
+        self.data_type = data_type
+        if self.data_type == 'ss':
+            self.model_file = os.path.join('autoencoder/model', 'var_autoencoder_ss.pth')
+        elif self.data_type == 'rgb':
+            self.model_file = os.path.join('autoencoder/model', 'var_autoencoder_rgb.pth')
+        # self.model_file = os.path.join('autoencoder/model', 'var_autoencoder.pth')
+        self.encoder = VariationalEncoder(latent_dims, self.data_type)
+        self.decoder = Decoder(latent_dims, self.data_type)
 
     def forward(self, x):
         x = x.to(device)
@@ -38,15 +44,21 @@ class VariationalAutoencoder(nn.Module):
         self.encoder.save()
         self.decoder.save()
     
-    def load(self):
+    def load(self, data_type):
         self.load_state_dict(torch.load(self.model_file))
-        self.encoder.load()
-        self.decoder.load()
+        self.encoder.load(data_type=data_type)
+        self.decoder.load(data_type=data_type)
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Reconstruct images using the trained VAE model')
+    parser.add_argument('--data_type', type=str, default='ss', help='Data type: ss or rgb')
 
-    data_dir = 'autoencoder/dataset/'
+    args = parser.parse_args()
+    if args.data_type == 'ss':
+        data_dir = 'autoencoder/dataset/'
+    elif args.data_type == 'rgb':
+        data_dir = 'autoencoder/dataset_rgb/'
 
     test_transforms = transforms.Compose([transforms.ToTensor()])
 
@@ -54,11 +66,12 @@ def main():
 
     testloader = torch.utils.data.DataLoader(test_data, batch_size=BATCH_SIZE)
     
-    model = VariationalAutoencoder(latent_dims=LATENT_SPACE).to(device)
-    model.load()
+    model = VariationalAutoencoder(latent_dims=LATENT_SPACE, data_type=args.data_type).to(device)
+    model.load(data_type=args.data_type)
     count = 1
+    os.makedirs(f'autoencoder/reconstructed_{args.data_type}', exist_ok=True)
     with torch.no_grad(): # No need to track the gradients
-        for x, _ in testloader:
+        for (x, _) in tqdm(testloader):
             # Move tensor to the proper device
             x = x.to(device)
             # Decode data
@@ -71,7 +84,7 @@ def main():
             img = transforms.ToPILImage()(x_hat)
 
             image_filename = str(count) +'.png'
-            img.save('autoencoder/reconstructed/'+image_filename)
+            img.save(f'autoencoder/reconstructed_{args.data_type}/'+image_filename)
             count +=1
 
 

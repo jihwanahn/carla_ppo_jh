@@ -24,22 +24,22 @@ class ActorCritic(nn.Module):
         self.actor = nn.Sequential(
                 nn.Linear(self.obs_dim, 512),
                 nn.Tanh(),
-                nn.Linear(512, 300),
+                nn.Linear(512, 256),
                 nn.Tanh(),
-                nn.Linear(300, 200),
+                nn.Linear(256, 128),
                 nn.Tanh(),
-                nn.Linear(200, self.action_dim),
+                nn.Linear(128, self.action_dim),
                 nn.Tanh()
                 )
 
         self.critic = nn.Sequential(
                 nn.Linear(self.obs_dim, 512),
                 nn.Tanh(),
-                nn.Linear(512, 300),
+                nn.Linear(512, 256),
                 nn.Tanh(),
-                nn.Linear(300, 200),
+                nn.Linear(256, 128),
                 nn.Tanh(),
-                nn.Linear(200, 1)
+                nn.Linear(128, 1)
                 )
         # print("ActorCritic initialized with obs_dim:", obs_dim, "action_dim:", action_dim)
 

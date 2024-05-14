@@ -15,12 +15,12 @@ from networks.on_policy.ppo.agent import PPOAgent
 from simulation.connection import ClientConnection
 from simulation.environment_new import CarlaEnvironment
 from parameters import *
-
+import vidmaker
 
 def parse_args():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp-name', type=str, default='vit',help='name of the experiment')
+    parser.add_argument('--exp-name', type=str, default='vae',help='name of the experiment')
     parser.add_argument('--env-name', type=str, default='carla', help='name of the simulation environment')
     parser.add_argument('--learning-rate', type=float, default=PPO_LEARNING_RATE, help='learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=SEED, help='seed of the experiment')
@@ -33,6 +33,8 @@ def parse_args():
     parser.add_argument('--load-checkpoint', type=bool, default=MODEL_LOAD, help='resume training?')
     parser.add_argument('--torch-deterministic', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, help='if toggled, `torch.backends.cudnn.deterministic=False`')
     parser.add_argument('--cuda', type=lambda x:bool(strtobool(x)), default=True, nargs='?', const=True, help='if toggled, cuda will not be enabled by deafult')
+    parser.add_argument('--sensor-type', type=str, default='SSC', help='sensor type')
+    parser.add_argument('--data-type', type=str, default='ss', help='data type')
     args = parser.parse_args()
     
     return args
@@ -57,6 +59,8 @@ def runner():
     checkpoint_load = args.load_checkpoint
     total_timesteps = args.total_timesteps
     action_std_init = args.action_std_init
+    sensor_type = args.sensor_type
+    data_type = args.data_type
 
     try:
         if exp_name == 'vae':
@@ -67,7 +71,7 @@ def runner():
             run_name = "VIT"
         elif exp_name == 'bigan':
             run_name = "BIGAN"
-            print('DEIT not implemented yet.')
+            print('not implemented yet.')
         else:
             raise ValueError("Invalid experiment name.")
             """
@@ -81,9 +85,9 @@ def runner():
         sys.exit()
     
     if train == True:
-        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
+        writer = SummaryWriter(f"runs/{run_name}_{data_type}_{action_std_init}_{int(total_timesteps)}/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
     else:
-        writer = SummaryWriter(f"runs/{run_name}_{action_std_init}_{int(total_timesteps)}_TEST/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
+        writer = SummaryWriter(f"runs/{run_name}_{data_type}_{action_std_init}_{int(total_timesteps)}_TEST/{town}/{args.learning_rate}_{args.seed}/{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}" for key, value in vars(args).items()])))
@@ -118,11 +122,11 @@ def runner():
         logging.error("Connection has been refused by the server.")
         ConnectionRefusedError
     if train:
-        env = CarlaEnvironment(client, world,town)
+        env = CarlaEnvironment(client, world,town, sensor_type=sensor_type)
     else:
-        env = CarlaEnvironment(client, world,town, checkpoint_frequency=None)
+        env = CarlaEnvironment(client, world,town, checkpoint_frequency=None, sensor_type=sensor_type)
     # LATENT_DIM_TEST = 50
-    encode = EncodeState(LATENT_DIM, run_name)
+    encode = EncodeState(LATENT_DIM, run_name, data_type)
 
 
     #========================================================================
@@ -132,8 +136,8 @@ def runner():
         time.sleep(0.5)
         
         if checkpoint_load:
-            chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{town}'))[2]) - 1
-            chkpt_file = f'checkpoints/{run_name}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
+            chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{data_type}/{town}'))[2]) - 1
+            chkpt_file = f'checkpoints/{run_name}/{data_type}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
             with open(chkpt_file, 'rb') as f:
                 data = pickle.load(f)
                 episode = data['episode']
@@ -208,10 +212,10 @@ def runner():
                 if episode % 10 == 0:
                     agent.learn()
                     agent.chkpt_save()
-                    chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{town}'))[2])
+                    chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{data_type}/{town}'))[2])
                     if chkt_file_nums != 0:
                         chkt_file_nums -=1
-                    chkpt_file = f'checkpoints/{run_name}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
+                    chkpt_file = f'checkpoints/{run_name}/{data_type}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
                     data_obj = {'cumulative_score': cumulative_score, 'episode': episode, 'timestep': timestep, 'action_std_init': action_std_init}
                     with open(chkpt_file, 'wb') as handle:
                         pickle.dump(data_obj, handle)
@@ -238,8 +242,8 @@ def runner():
                 if episode % 100 == 0:
                     
                     agent.save()
-                    chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{town}'))[2])
-                    chkpt_file = f'checkpoints/{run_name}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
+                    chkt_file_nums = len(next(os.walk(f'checkpoints/{run_name}/{data_type}/{town}'))[2])
+                    chkpt_file = f'checkpoints/{run_name}/{data_type}/{town}/checkpoint_{run_name}_'+str(chkt_file_nums)+'.pickle'
                     data_obj = {'cumulative_score': cumulative_score, 'episode': episode, 'timestep': timestep, 'action_std_init': action_std_init}
                     with open(chkpt_file, 'wb') as handle:
                         pickle.dump(data_obj, handle)
@@ -305,6 +309,7 @@ if __name__ == "__main__":
     # try:        
     runner()
     # except KeyboardInterrupt:
-    #     sys.exit()
+        
+        # sys.exit()
     # finally:
     #     print('\nExit')
